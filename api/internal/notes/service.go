@@ -1,9 +1,10 @@
 // Package notes owns letters between the two of you (NoteLetter, 4.3).
 //
-// Privacy rules, enforced here rather than in the UI:
+// Rules, enforced here rather than in the UI:
 //   - the recipient never receives a note's body before it is delivered; while it
 //     waits they see only who it's from and when it opens
-//   - the author never learns whether a note was opened: they see "delivered"
+//   - the author sees when a delivered note was read (product decision, replacing
+//     the canvas's "never Opened"); the reader is told the author will see it
 package notes
 
 import (
@@ -51,8 +52,9 @@ type View struct {
 	DeliverAt   *time.Time
 	DeliverTz   *string
 	DeliveredAt *time.Time
-	Opened      *bool // recipient only
-	Kept        *bool // recipient only
+	ReadAt      *time.Time // author: when the recipient first opened it
+	Opened      *bool      // recipient only
+	Kept        *bool      // recipient only
 	CreatedAt   time.Time
 }
 
@@ -62,6 +64,9 @@ func view(n store.Note, me uuid.UUID) View {
 	case v.Mine:
 		b := n.Body
 		v.Body = &b
+		if n.State == "delivered" {
+			v.ReadAt = n.OpenedAt
+		}
 	case n.State == "delivered":
 		b, opened, kept := n.Body, n.OpenedAt != nil, n.Kept
 		v.Body, v.Opened, v.Kept = &b, &opened, &kept
@@ -212,28 +217,30 @@ func (s *Service) List(ctx context.Context, sc Scope) ([]View, error) {
 	return out, nil
 }
 
-// Get returns one note; opening a delivered note as its recipient marks it opened
-// (privately: the author never sees this).
-func (s *Service) Get(ctx context.Context, sc Scope, id uuid.UUID) (View, error) {
+// Get returns one note. Opening a delivered note as its recipient marks it read;
+// firstRead reports that this call did so (the author is then told).
+func (s *Service) Get(ctx context.Context, sc Scope, id uuid.UUID) (v View, firstRead bool, err error) {
 	q := store.New(s.pool)
 	n, err := q.GetNote(ctx, store.GetNoteParams{ID: id, RelationshipID: sc.SpaceID})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return View{}, ErrNotFound
+		return View{}, false, ErrNotFound
 	}
 	if err != nil {
-		return View{}, err
+		return View{}, false, err
 	}
 	if n.AuthorID != sc.UserID && n.RecipientID != sc.UserID {
-		return View{}, ErrNotFound
+		return View{}, false, ErrNotFound
 	}
 	if n.RecipientID == sc.UserID && n.State == "draft" {
-		return View{}, ErrNotFound
+		return View{}, false, ErrNotFound
 	}
-	v := view(n, sc.UserID)
+	v = view(n, sc.UserID)
 	if n.RecipientID == sc.UserID && n.State == "delivered" && n.OpenedAt == nil {
-		_ = q.OpenNote(ctx, store.OpenNoteParams{ID: id, RecipientID: sc.UserID})
+		if err := q.OpenNote(ctx, store.OpenNoteParams{ID: id, RecipientID: sc.UserID}); err == nil {
+			firstRead = true
+		}
 	}
-	return v, nil
+	return v, firstRead, nil
 }
 
 func (s *Service) Keep(ctx context.Context, sc Scope, id uuid.UUID, keep bool) error {

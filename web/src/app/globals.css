@@ -3,10 +3,17 @@
 
 /* Fonts come from next/font; the token stacks put them first. */
 :root {
+  /* Envelope flap on a sealed note (NoteLetter "waiting"); a shade of shared-wash. */
+  --shared-flap: #EBD3CE;
   --font-serif: var(--font-newsreader), 'Iowan Old Style', Georgia, serif;
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: var(--font-dm-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --shared-flap: #5A3D43; }
+}
+:root[data-theme="dark"] { --shared-flap: #5A3D43; }
 
 /* Tailwind names map to semantic tokens only. */
 @theme inline {
@@ -27,6 +34,7 @@
   --color-shared: var(--shared-tone);
   --color-shared-wash: var(--shared-wash);
   --color-shared-ink: var(--shared-ink);
+  --color-shared-flap: var(--shared-flap);
   --color-ok-wash: var(--status-ok-wash);
   --color-ok-ink: var(--status-ok-ink);
   --color-time-wash: var(--status-time-wash);

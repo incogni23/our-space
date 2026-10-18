@@ -150,6 +150,11 @@ Schema: `creations` (spec + rendered image as its own media row, version), `crea
 - [ ] F5 Our public side (shared name, bio ideas, look, profile picture) — changes need partner OK
 - [ ] F3 Reel Maker (server-side video rendering) — Later
 
+## Product decisions made during the build
+
+- Read receipts: the note's writer sees when it was read (replaces the canvas's "never Opened"); the reader is told "<name> can see when you read this". Canvas 5.2 / 5.4 #05 to update.
+- Plan history: plans are never deleted; History tab shows past, declined and cancelled plans; each plan keeps a "What happened" timeline.
+
 ## Phase 5 · Polish & safety (week 7)  ← in progress
 
 - [x] Security headers: CSP, frame-ancestors none, nosniff, referrer and permissions policy, HSTS in production; strict CSP on API responses
@@ -158,9 +163,13 @@ Schema: `creations` (spec + rendered image as its own media row, version), `crea
 - [x] Installable PWA: manifest, icons (emblem), service worker; pages and your data readable offline from the last copy; cleared on sign-out
 - [x] Offline outbox: pins, pin notes and notes saved offline wait ("N waiting to send") and send when back; never shown as sent early
 - [x] Web Push for things with a time: note opening ("A note is here for you", lock-screen safe) and plan reminders; endpoints restricted to known push services; VAPID keys from env (dev keys kept in .devdb)
-- [ ] Remaining 5.2 states sweep (Made by Us rendering states, notification banner timing)
-- [ ] Evening theme + accessibility audit (contrast in dark, focus order, 200% zoom, reduced motion)
-- [ ] Authorization review across every endpoint + audit log of sensitive actions (leave, number change, recovery)
+- [x] 5.2 states sweep: added "Dev said yes to coffee" plan-answer notice (in-app, no push); others covered
+- [ ] Plans empty state: suggest a saved pin ("Little Ondu is still waiting for a date")
+- [x] Evening theme audit: no hard-coded colours outside intentional photo overlays; envelope flap is now a token
+- [x] Keyboard: soft-launch crop point moves with arrow keys
+- [ ] Screen-reader pass on a real device (VoiceOver/TalkBack)
+- [x] Authorization review of every route (all content scoped to the caller's space; fixed: DELETE requests were refused by the JSON guard)
+- [x] Audit log of sensitive actions: sign-in, recovery code used, start fresh, number changed, recovery codes regenerated, space created/joined/left
 - [ ] Together prototype (shared playback; WebSockets)
 
 ## Phase 6b · Subscription (do last, before beta) (canvas row H, handoff 5.5)

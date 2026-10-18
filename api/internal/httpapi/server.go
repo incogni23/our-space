@@ -150,6 +150,7 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/pins/{id}/restore", s.handleRestorePin)
 			r.Post("/pins/{id}/notes", s.handleAddPinNote)
 			r.Get("/plans", s.handleListPlans)
+			r.Get("/plans/history", s.handlePlanHistory)
 			r.Post("/plans", s.handleCreatePlan)
 			r.Get("/plans/{id}", s.handleGetPlan)
 			r.Patch("/plans/{id}", s.handleUpdatePlan)
@@ -185,12 +186,15 @@ func (s *Server) Routes() http.Handler {
 	return r
 }
 
-// requireJSON: mutating requests must be application/json. With SameSite=Lax
-// cookies this stops cross-site form posts (a cross-origin JSON post needs CORS).
+// requireJSON: POST/PATCH must be application/json (photo uploads: multipart plus
+// a custom header). With SameSite=Lax cookies this stops cross-site form posts,
+// since a cross-origin JSON request needs CORS, which we never grant.
 func (s *Server) requireJSON(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
+		case http.MethodDelete:
+			// Bodyless. A cross-site DELETE needs a CORS preflight, which we never grant.
 		default:
 			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if (r.URL.Path == "/api/v1/media" || strings.HasSuffix(r.URL.Path, "/render")) && mt == "multipart/form-data" {

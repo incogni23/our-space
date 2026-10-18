@@ -141,7 +141,7 @@ func (s *Server) jobPurgeSpace(ctx context.Context, payload []byte) error {
 		return err
 	}
 	steps := []func(context.Context, uuid.UUID) error{
-		q.PurgeShareLinks, q.PurgeCreationApprovals, q.PurgeCreations,
+		q.PurgeShareLinks, q.PurgeCreationApprovals, q.PurgeCreations, q.PurgePlanEvents,
 		q.PurgeNotes, q.PurgePinNotes, q.PurgeMemoryMedia, q.PurgePlans, q.PurgeMemories, q.PurgePins, q.PurgeBoards,
 	}
 	for _, step := range steps {

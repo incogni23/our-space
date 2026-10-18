@@ -75,3 +75,6 @@ DELETE FROM creation_approvals WHERE creation_id IN (SELECT id FROM creations WH
 
 -- name: PurgeCreations :exec
 DELETE FROM creations WHERE relationship_id = $1;
+
+-- name: PurgePlanEvents :exec
+DELETE FROM plan_events WHERE plan_id IN (SELECT id FROM plans WHERE relationship_id = $1);

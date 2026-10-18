@@ -25,6 +25,18 @@ export function NoticeBanner({ notices, tz }: { notices: Notice[]; tz?: string }
                 </Link>
               </>
             ) : null}
+            {n.kind === "plan_answer" ? (
+              <>
+                {n.payload.answer === "accepted"
+                  ? `${n.payload.name || "They"} said yes to ${n.payload.title}.`
+                  : n.payload.answer === "declined"
+                    ? `${n.payload.name || "They"} can’t make ${n.payload.title}.`
+                    : `${n.payload.name || "They"} suggested another time for ${n.payload.title}.`}{" "}
+                <Link href={`/plans/${n.payload.planId}`} onClick={() => void markNoticeSeen(n.id).catch(() => {})} className="font-medium text-ink">
+                  Open
+                </Link>
+              </>
+            ) : null}
             {n.kind === "plan_reminder" ? (
               <>
                 {n.payload.title}: {dayShort(n.payload.at, tz ?? "UTC")} at {timeOnly(n.payload.at, tz ?? "UTC")}.{" "}

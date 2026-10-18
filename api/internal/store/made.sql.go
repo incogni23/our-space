@@ -383,6 +383,15 @@ func (q *Queries) PurgeCreations(ctx context.Context, relationshipID uuid.UUID) 
 	return err
 }
 
+const purgePlanEvents = `-- name: PurgePlanEvents :exec
+DELETE FROM plan_events WHERE plan_id IN (SELECT id FROM plans WHERE relationship_id = $1)
+`
+
+func (q *Queries) PurgePlanEvents(ctx context.Context, relationshipID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, purgePlanEvents, relationshipID)
+	return err
+}
+
 const purgeShareLinks = `-- name: PurgeShareLinks :exec
 DELETE FROM share_links WHERE relationship_id = $1
 `

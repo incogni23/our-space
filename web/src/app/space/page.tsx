@@ -212,7 +212,7 @@ export default function OurSpace() {
           <Link href="/notes" className="flex items-center gap-3.5 rounded-(--radius-card) border border-line bg-surface px-4 py-3.5 text-ink no-underline">
             <span className="relative h-11 w-14 flex-none" aria-hidden="true">
               <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
-              <span className="absolute inset-x-0 top-0 h-6 bg-[#EBD3CE] [clip-path:polygon(0_0,100%_0,50%_100%)] dark:bg-[#5A3D43]" />
+              <span className="absolute inset-x-0 top-0 h-6 bg-shared-flap [clip-path:polygon(0_0,100%_0,50%_100%)]" />
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="text-[15px] font-semibold">

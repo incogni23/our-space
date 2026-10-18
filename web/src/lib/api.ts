@@ -59,6 +59,7 @@ export type Plan = {
   respondedBy?: string;
   createdAt: string;
   occurrences?: string[];
+  events?: Array<{ userId: string; action: "created" | "accepted" | "declined" | "suggested" | "moved" | "edited" | "cancelled"; at?: string; when: string }>;
 };
 
 export type PinNote = { id: string; authorId: string; body: string; createdAt: string };
@@ -81,7 +82,8 @@ export type Notice =
     }
   | { id: string; kind: "partner_number_updated"; createdAt: string; payload: { name: string } }
   | { id: string; kind: "note_delivered"; createdAt: string; payload: { noteId: string; fromName: string } }
-  | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } };
+  | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } }
+  | { id: string; kind: "plan_answer"; createdAt: string; payload: { planId: string; title: string; answer: "accepted" | "declined" | "suggested"; name: string; at: string } };
 
 export type Note = {
   id: string;
@@ -91,6 +93,8 @@ export type Note = {
   deliverAt?: string;
   deliverTz?: string;
   deliveredAt?: string;
+  /** Writer only: when it was first read. */
+  readAt?: string;
   opened?: boolean;
   kept?: boolean;
   createdAt: string;

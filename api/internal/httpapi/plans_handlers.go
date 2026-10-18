@@ -29,6 +29,14 @@ type planJSON struct {
 	RespondedBy       *string     `json:"respondedBy,omitempty"`
 	CreatedAt         time.Time   `json:"createdAt"`
 	Occurrences       []time.Time `json:"occurrences,omitempty"`
+	Events            []planEvent `json:"events,omitempty"`
+}
+
+type planEvent struct {
+	UserID string     `json:"userId"`
+	Action string     `json:"action"`
+	At     *time.Time `json:"at,omitempty"`
+	When   time.Time  `json:"when"`
 }
 
 func idPtr(u *uuid.UUID) *string {
@@ -149,7 +157,11 @@ func (s *Server) handleGetPlan(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"plan": toPlan(v.Plan, v.Occurrences)})
+	pj := toPlan(v.Plan, v.Occurrences)
+	for _, e := range v.Events {
+		pj.Events = append(pj.Events, planEvent{UserID: e.UserID.String(), Action: e.Action, At: e.AtTime, When: e.CreatedAt})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"plan": pj})
 }
 
 func (s *Server) handleRespondPlan(w http.ResponseWriter, r *http.Request) {
@@ -174,6 +186,7 @@ func (s *Server) handleRespondPlan(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.noticePlanAnswer(r, sc, p, in.Action)
 	s.publish(r, sc.SpaceID, "plan.updated", p.ID.String())
 	writeJSON(w, http.StatusOK, map[string]any{"plan": toPlan(p, nil)})
 }
@@ -229,4 +242,49 @@ func (s *Server) handleCancelPlan(w http.ResponseWriter, r *http.Request) {
 	}
 	s.publish(r, sc.SpaceID, "plan.cancelled", id.String())
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// noticePlanAnswer tells the other person how their plan was answered (5.2).
+func (s *Server) noticePlanAnswer(r *http.Request, sc plans.Scope, p store.Plan, action string) {
+	answer := map[string]string{"accept": "accepted", "decline": "declined", "suggest": "suggested"}[action]
+	if answer == "" {
+		return
+	}
+	q := store.New(s.pool)
+	me, err := q.GetUser(r.Context(), sc.UserID)
+	if err != nil {
+		return
+	}
+	others, err := q.OtherMembers(r.Context(), store.OtherMembersParams{RelationshipID: sc.SpaceID, UserID: sc.UserID})
+	if err != nil {
+		return
+	}
+	at := p.StartsAt
+	if p.SuggestedStartsAt != nil {
+		at = *p.SuggestedStartsAt
+	}
+	for _, o := range others {
+		_ = s.notice(r.Context(), q, o, "plan_answer", map[string]any{
+			"planId": p.ID.String(), "title": p.Title, "answer": answer, "name": me.DisplayName, "at": at,
+		})
+	}
+	s.publish(r, sc.SpaceID, "notice.created", p.ID.String())
+}
+
+// GET /plans/history — past, declined and cancelled plans, newest first.
+func (s *Server) handlePlanHistory(w http.ResponseWriter, r *http.Request) {
+	sc, ok := s.planReadScope(w, r)
+	if !ok {
+		return
+	}
+	rows, err := s.plans.History(r.Context(), sc)
+	if err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	out := make([]planJSON, 0, len(rows))
+	for _, p := range rows {
+		out = append(out, toPlan(p, nil))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"plans": out})
 }

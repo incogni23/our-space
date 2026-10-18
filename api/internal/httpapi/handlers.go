@@ -114,6 +114,7 @@ func (s *Server) handleVerifySignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setSession(w, si.Token, si.Session.ExpiresAt)
+	s.audit(r, si.User.ID, nil, "sign_in", map[string]any{"status": si.Session.Status, "newUser": si.NewUser})
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user": toUser(si.User), "sessionStatus": si.Session.Status, "newUser": si.NewUser,
 	})
@@ -146,6 +147,7 @@ func (s *Server) handleRecovery(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.audit(r, session(r).UserID, nil, "recovery_code_used", nil)
 	writeJSON(w, http.StatusOK, map[string]string{"sessionStatus": auth.SessionActive})
 }
 
@@ -160,6 +162,8 @@ func (s *Server) handleStartFresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setSession(w, si.Token, si.Session.ExpiresAt)
+	s.audit(r, session(r).UserID, nil, "number_released_to_new_account", map[string]any{"newUser": si.User.ID.String()})
+	s.audit(r, si.User.ID, nil, "start_fresh", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"user": toUser(si.User), "sessionStatus": si.Session.Status, "newUser": true})
 }
 
@@ -250,6 +254,7 @@ func (s *Server) handleRecoveryCodes(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, err)
 		return
 	}
+	s.audit(r, session(r).UserID, nil, "recovery_codes_regenerated", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"codes": codes})
 }
 
@@ -331,6 +336,7 @@ func (s *Server) handleChangeNumber(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.audit(r, u.ID, nil, "number_changed", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"user": toUser(u)})
 }
 
@@ -377,10 +383,12 @@ func (s *Server) handleCreateSpace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := session(r).UserID
-	if _, err := s.pairing.CreateSpace(r.Context(), uid, in.Name); err != nil {
+	rel, err := s.pairing.CreateSpace(r.Context(), uid, in.Name)
+	if err != nil {
 		s.domainError(w, r, err)
 		return
 	}
+	s.audit(r, uid, &rel.ID, "space_created", nil)
 	sp, err := s.pairing.CurrentSpace(r.Context(), uid)
 	if err != nil {
 		s.serverError(w, r, err)
@@ -429,6 +437,7 @@ func (s *Server) handleAccept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.publish(r, rel.ID, "space.joined", rel.ID.String())
+	s.audit(r, uid, &rel.ID, "space_joined", nil)
 	sp, err := s.pairing.CurrentSpace(r.Context(), uid)
 	if err != nil {
 		s.serverError(w, r, err)
@@ -512,6 +521,7 @@ func (s *Server) handleLeave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.publish(r, rel.ID, "space.closed", rel.ID.String())
+	s.audit(r, uid, &rel.ID, "space_left", map[string]any{"wasActive": rel.ReadOnlyUntil != nil})
 	out := map[string]any{"status": rel.Status, "readOnlyUntil": rel.ReadOnlyUntil}
 	if avail, err := s.pairing.NewSpaceAvailableAt(r.Context(), uid); err == nil && !avail.IsZero() {
 		out["newSpaceAvailableAt"] = avail

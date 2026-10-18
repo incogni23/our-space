@@ -58,6 +58,27 @@ func (q *Queries) AcceptSuggestion(ctx context.Context, arg AcceptSuggestionPara
 	return i, err
 }
 
+const addPlanEvent = `-- name: AddPlanEvent :exec
+INSERT INTO plan_events (plan_id, user_id, action, at_time) VALUES ($1, $2, $3, $4)
+`
+
+type AddPlanEventParams struct {
+	PlanID uuid.UUID
+	UserID uuid.UUID
+	Action string
+	AtTime *time.Time
+}
+
+func (q *Queries) AddPlanEvent(ctx context.Context, arg AddPlanEventParams) error {
+	_, err := q.db.Exec(ctx, addPlanEvent,
+		arg.PlanID,
+		arg.UserID,
+		arg.Action,
+		arg.AtTime,
+	)
+	return err
+}
+
 const cancelPlan = `-- name: CancelPlan :execrows
 UPDATE plans SET status = 'cancelled', updated_at = now()
 WHERE id = $1 AND relationship_id = $2 AND status IN ('proposed', 'confirmed')
@@ -264,6 +285,55 @@ func (q *Queries) GetPlanForUpdate(ctx context.Context, arg GetPlanForUpdatePara
 	return i, err
 }
 
+const historyPlans = `-- name: HistoryPlans :many
+SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind FROM plans
+WHERE relationship_id = $1
+  AND (status IN ('declined', 'cancelled') OR (repeat = 'none' AND starts_at < now() - interval '2 hours'))
+ORDER BY coalesce(responded_at, updated_at, starts_at) DESC
+LIMIT 300
+`
+
+// Everything that's over: past one-offs, and anything declined or cancelled.
+func (q *Queries) HistoryPlans(ctx context.Context, relationshipID uuid.UUID) ([]Plan, error) {
+	rows, err := q.db.Query(ctx, historyPlans, relationshipID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Plan
+	for rows.Next() {
+		var i Plan
+		if err := rows.Scan(
+			&i.ID,
+			&i.RelationshipID,
+			&i.CreatedBy,
+			&i.PinID,
+			&i.Kind,
+			&i.Title,
+			&i.Place,
+			&i.Notes,
+			&i.StartsAt,
+			&i.AnchorTz,
+			&i.Repeat,
+			&i.Status,
+			&i.SuggestedStartsAt,
+			&i.SuggestedBy,
+			&i.RespondedBy,
+			&i.RespondedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Remind,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const livePlans = `-- name: LivePlans :many
 SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind FROM plans
 WHERE relationship_id = $1 AND status IN ('proposed', 'confirmed')
@@ -332,6 +402,42 @@ type MarkPinPlannedParams struct {
 func (q *Queries) MarkPinPlanned(ctx context.Context, arg MarkPinPlannedParams) error {
 	_, err := q.db.Exec(ctx, markPinPlanned, arg.ID, arg.RelationshipID)
 	return err
+}
+
+const planEvents = `-- name: PlanEvents :many
+SELECT user_id, action, at_time, created_at FROM plan_events WHERE plan_id = $1 ORDER BY id
+`
+
+type PlanEventsRow struct {
+	UserID    uuid.UUID
+	Action    string
+	AtTime    *time.Time
+	CreatedAt time.Time
+}
+
+func (q *Queries) PlanEvents(ctx context.Context, planID uuid.UUID) ([]PlanEventsRow, error) {
+	rows, err := q.db.Query(ctx, planEvents, planID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PlanEventsRow
+	for rows.Next() {
+		var i PlanEventsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Action,
+			&i.AtTime,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const respondToPlan = `-- name: RespondToPlan :one

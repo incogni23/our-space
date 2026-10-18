@@ -11,6 +11,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type AuditEvent struct {
+	ID             int64
+	UserID         *uuid.UUID
+	RelationshipID *uuid.UUID
+	Action         string
+	Ip             *netip.Addr
+	Detail         []byte
+	CreatedAt      time.Time
+}
+
 type Board struct {
 	ID             uuid.UUID
 	RelationshipID uuid.UUID
@@ -176,6 +186,15 @@ type Plan struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	Remind            string
+}
+
+type PlanEvent struct {
+	ID        int64
+	PlanID    uuid.UUID
+	UserID    uuid.UUID
+	Action    string
+	AtTime    *time.Time
+	CreatedAt time.Time
 }
 
 type PushSubscription struct {
