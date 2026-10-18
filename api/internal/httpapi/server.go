@@ -21,6 +21,7 @@ import (
 	"betweenus/api/internal/auth"
 	"betweenus/api/internal/boards"
 	"betweenus/api/internal/pairing"
+	"betweenus/api/internal/plans"
 	"betweenus/api/internal/store"
 	"betweenus/api/internal/token"
 )
@@ -45,10 +46,11 @@ type Server struct {
 	auth    *auth.Service
 	pairing *pairing.Service
 	boards  *boards.Service
+	plans   *plans.Service
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
-	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool)}
+	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool)}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -107,6 +109,12 @@ func (s *Server) Routes() http.Handler {
 			r.Delete("/pins/{id}", s.handleDeletePin)
 			r.Post("/pins/{id}/restore", s.handleRestorePin)
 			r.Post("/pins/{id}/notes", s.handleAddPinNote)
+			r.Get("/plans", s.handleListPlans)
+			r.Post("/plans", s.handleCreatePlan)
+			r.Get("/plans/{id}", s.handleGetPlan)
+			r.Patch("/plans/{id}", s.handleUpdatePlan)
+			r.Post("/plans/{id}/respond", s.handleRespondPlan)
+			r.Post("/plans/{id}/cancel", s.handleCancelPlan)
 		})
 	})
 	return r
@@ -304,6 +312,16 @@ func (s *Server) domainError(w http.ResponseWriter, r *http.Request, err error) 
 		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
 	case errors.Is(err, boards.ErrBoardRequired):
 		writeError(w, http.StatusBadRequest, "board_required", "Choose a board, or make a new one.")
+	case errors.Is(err, plans.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That plan isn’t here any more.")
+	case errors.Is(err, plans.ErrInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_input", "Check the name, date and time.")
+	case errors.Is(err, plans.ErrInPast):
+		writeError(w, http.StatusBadRequest, "in_past", "That time has already passed.")
+	case errors.Is(err, plans.ErrNotYourTurn):
+		writeError(w, http.StatusConflict, "not_your_turn", "Waiting on the other person to answer.")
+	case errors.Is(err, plans.ErrClosed):
+		writeError(w, http.StatusConflict, "plan_closed", "This plan was already answered or cancelled.")
 	case errors.Is(err, pairing.ErrOwnInvite):
 		writeError(w, http.StatusBadRequest, "own_invite", "This is your own invite. Send it to your person.")
 	default:
