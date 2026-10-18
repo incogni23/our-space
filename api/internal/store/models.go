@@ -20,6 +20,41 @@ type Board struct {
 	ArchivedAt     *time.Time
 }
 
+type Medium struct {
+	ID             uuid.UUID
+	RelationshipID uuid.UUID
+	UploadedBy     uuid.UUID
+	Width          int32
+	Height         int32
+	Bytes          int64
+	KeyFull        string
+	KeyThumb       string
+	TakenAt        *time.Time
+	CreatedAt      time.Time
+	DeletedAt      *time.Time
+}
+
+type Memory struct {
+	ID             uuid.UUID
+	RelationshipID uuid.UUID
+	CreatedBy      uuid.UUID
+	Kind           string
+	Title          string
+	Caption        string
+	Place          string
+	HappenedOn     time.Time
+	EndsOn         *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      *time.Time
+}
+
+type MemoryMedium struct {
+	MemoryID uuid.UUID
+	MediaID  uuid.UUID
+	Position int32
+}
+
 type PhoneVerification struct {
 	ID          uuid.UUID
 	PhoneE164   string

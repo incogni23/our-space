@@ -171,3 +171,51 @@ export function cityOf(tz: string): string {
   const last = tz.split("/").pop() ?? tz;
   return last.replace(/_/g, " ");
 }
+
+export type Photo = { id: string; width: number; height: number; takenAt?: string; uploadedBy?: string };
+
+export type MemoryKind = "moment" | "trip" | "change" | "start";
+
+export type Memory = {
+  id: string;
+  createdBy: string;
+  kind: MemoryKind;
+  title: string;
+  caption: string;
+  place: string;
+  happenedOn: string;
+  endsOn?: string;
+  photoCount: number;
+  coverId?: string;
+  photos?: Photo[];
+  createdAt: string;
+};
+
+export const photoUrl = (id: string, variant: "thumb" | "full" = "thumb") => `/api/v1/media/${id}/${variant}`;
+
+const KEEP_ORIGINAL_BYTES = 8 * 1024 * 1024;
+
+/** Shrinks big photos on the device (the server still strips metadata from everything). */
+async function prepare(file: File): Promise<Blob> {
+  if (file.size <= KEEP_ORIGINAL_BYTES || typeof createImageBitmap === "undefined") return file;
+  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  bmp.close();
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode"))), "image/jpeg", 0.9));
+}
+
+export async function uploadPhoto(file: File): Promise<Photo> {
+  const body = new FormData();
+  body.append("file", await prepare(file), file.name || "photo.jpg");
+  const res = await fetch("/api/v1/media", { method: "POST", body, headers: { "X-BU-Upload": "1" }, credentials: "same-origin" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const e = data?.error ?? {};
+    throw new ApiError(res.status, e.code ?? "unknown", e.message ?? "That photo didn’t upload. Try again.");
+  }
+  return data.photo as Photo;
+}
