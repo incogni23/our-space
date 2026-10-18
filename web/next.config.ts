@@ -32,6 +32,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Slim server bundle for the Docker image (Dockerfile.web).
+  output: "standalone",
+  // Lets a production build run beside the dev server without sharing .next.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // The Go API is served under the same origin so session cookies stay first-party.
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiOrigin}/api/:path*` }];

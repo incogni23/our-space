@@ -420,6 +420,27 @@ func (q *Queries) MembersOf(ctx context.Context, relationshipID uuid.UUID) ([]Me
 	return items, nil
 }
 
+const oldestUnplannedPin = `-- name: OldestUnplannedPin :one
+SELECT id, title, kind FROM pins
+WHERE relationship_id = $1 AND deleted_at IS NULL AND status = 'saved' AND kind IN ('place', 'idea', 'link')
+ORDER BY (kind = 'place') DESC, created_at
+LIMIT 1
+`
+
+type OldestUnplannedPinRow struct {
+	ID    uuid.UUID
+	Title string
+	Kind  string
+}
+
+// For the empty Plans screen (5.2): "Little Ondu is still waiting for a date."
+func (q *Queries) OldestUnplannedPin(ctx context.Context, relationshipID uuid.UUID) (OldestUnplannedPinRow, error) {
+	row := q.db.QueryRow(ctx, oldestUnplannedPin, relationshipID)
+	var i OldestUnplannedPinRow
+	err := row.Scan(&i.ID, &i.Title, &i.Kind)
+	return i, err
+}
+
 const readableSpaceFor = `-- name: ReadableSpaceFor :one
 SELECT r.id, r.name, r.status, r.read_only_until FROM relationship_members rm
 JOIN relationships r ON r.id = rm.relationship_id

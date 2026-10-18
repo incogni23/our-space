@@ -83,7 +83,11 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 			PreviewStatus: p.PreviewStatus, PreviewSite: p.PreviewSite, PreviewDescription: p.PreviewDescription, PreviewMediaID: p.PreviewMediaID,
 		}, p.BoardName))
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"newFromPartner": pins})
+	out := map[string]any{"newFromPartner": pins}
+	if p, err := store.New(s.pool).OldestUnplannedPin(r.Context(), sp.ID); err == nil {
+		out["waitingForADate"] = map[string]string{"id": p.ID.String(), "title": p.Title, "kind": p.Kind}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleListBoards(w http.ResponseWriter, r *http.Request) {

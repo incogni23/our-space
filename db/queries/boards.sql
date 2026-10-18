@@ -102,3 +102,10 @@ WHERE rm.relationship_id = $1 ORDER BY rm.joined_at;
 -- name: GetPinAny :one
 -- For background jobs only (already scoped by the job's own payload).
 SELECT * FROM pins WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: OldestUnplannedPin :one
+-- For the empty Plans screen (5.2): "Little Ondu is still waiting for a date."
+SELECT id, title, kind FROM pins
+WHERE relationship_id = $1 AND deleted_at IS NULL AND status = 'saved' AND kind IN ('place', 'idea', 'link')
+ORDER BY (kind = 'place') DESC, created_at
+LIMIT 1;

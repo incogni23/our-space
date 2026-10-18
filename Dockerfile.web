@@ -1,0 +1,24 @@
+# Between Us web. Build from the repo root (needs design/ and web/):
+#   docker build -f Dockerfile.web --build-arg API_ORIGIN=http://api:8080 -t betweenus-web .
+# API_ORIGIN is baked in at build time (Next.js compiles rewrites into the build).
+FROM node:20-alpine AS build
+WORKDIR /repo
+RUN corepack enable && corepack prepare pnpm@9.9.0 --activate
+COPY web/package.json web/pnpm-lock.yaml ./web/
+RUN cd web && pnpm install --frozen-lockfile
+COPY design ./design
+COPY web ./web
+ARG API_ORIGIN=http://api:8080
+ENV API_ORIGIN=$API_ORIGIN NEXT_TELEMETRY_DISABLED=1
+RUN cd web && pnpm build
+
+FROM node:20-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=build --chown=app:app /repo/web/.next/standalone ./
+COPY --from=build --chown=app:app /repo/web/.next/static ./.next/static
+COPY --from=build --chown=app:app /repo/web/public ./public
+USER app
+EXPOSE 3000
+CMD ["node", "server.js"]

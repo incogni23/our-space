@@ -7,3 +7,4 @@ web/out/
 /bin/
 *.log
 .DS_Store
+web/.next-*

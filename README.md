@@ -20,6 +20,12 @@ cd web && pnpm install && pnpm dev
 Open http://localhost:3000. With `DEV_FIXED_OTP=123456` every phone code is `123456`.
 To try pairing, use a second browser profile (or a private window) for the partner.
 
+## Run with Docker
+
+```sh
+docker compose up --build   # Postgres, MinIO, API, web → http://localhost:3000
+```
+
 ## Layout
 
 ```

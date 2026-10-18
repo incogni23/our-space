@@ -57,7 +57,7 @@ todo.md
 - [x] goose migrations + sqlc config wired to `db/`
 - [x] Next.js app with Tailwind theme generated from `tokens.css` (light + evening)
 - [x] Fonts: Newsreader, DM Sans, DM Mono
-- [ ] GitHub Actions: go vet/test (with Postgres service), web lint/typecheck/build
+- [x] GitHub Actions: sqlc diff, gofmt, go vet, go test -race with Postgres; web lint, typecheck, build
 
 ## Phase 1 · Identity & exclusive pairing (weeks 1–2)
 
@@ -166,7 +166,7 @@ Kept in sync with the canvas (5.2 States, 5.4 Product calls, 4.3 Content, protot
 - [x] Offline outbox: pins, pin notes and notes saved offline wait ("N waiting to send") and send when back; never shown as sent early
 - [x] Web Push for things with a time: note opening ("A note is here for you", lock-screen safe) and plan reminders; endpoints restricted to known push services; VAPID keys from env (dev keys kept in .devdb)
 - [x] 5.2 states sweep: added "Dev said yes to coffee" plan-answer notice (in-app, no push); others covered
-- [ ] Plans empty state: suggest a saved pin ("Little Ondu is still waiting for a date")
+- [x] Plans empty state: suggests the oldest unplanned pin ("Little Ondu is still waiting for a date")
 - [x] Evening theme audit: no hard-coded colours outside intentional photo overlays; envelope flap is now a token
 - [x] Keyboard: soft-launch crop point moves with arrow keys
 - [ ] Screen-reader pass on a real device (VoiceOver/TalkBack)
@@ -204,6 +204,8 @@ UI
 - [ ] Read-only banner + restart for lapsed spaces
 
 ## Phase 6 · Beta (week 8)
+
+- [x] Docker images: `Dockerfile.api` (distroless, non-root), `Dockerfile.web` (Next standalone); `docker-compose.yml` with Postgres + MinIO for a full local stack (not yet run: Docker isn't installed on this machine)
 
 - [ ] Deploy (managed containers + managed Postgres + S3)
 - [ ] Small couples beta, feedback loop

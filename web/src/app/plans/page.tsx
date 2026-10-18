@@ -19,6 +19,7 @@ export default function Plans() {
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [view, setView] = useState<"up" | "month" | "history">("up");
   const [history, setHistory] = useState<Plan[] | null>(null);
+  const [suggest, setSuggest] = useState<{ id: string; title: string } | null>(null);
   const [monthOffset, setMonthOffset] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,13 @@ export default function Plans() {
       .then((r) => setPlans(r.plans))
       .catch((e) => setError(errorMessage(e)));
   }, [ready, tick]);
+
+  useEffect(() => {
+    if (!ready || readOnly) return;
+    api<{ waitingForADate?: { id: string; title: string } }>("/space/home")
+      .then((r) => setSuggest(r.waitingForADate ?? null))
+      .catch(() => {});
+  }, [ready, readOnly, tick]);
 
   useEffect(() => {
     if (!ready || view !== "history") return;
@@ -153,7 +161,14 @@ export default function Plans() {
         upcoming.length === 0 ? (
           <div className="flex flex-col gap-2 pt-10 text-center">
             <h2 className="m-0 font-display text-2xl font-normal">Nothing on the calendar yet.</h2>
-            <p className="m-0 text-[15px] leading-[1.55] text-muted">Is there something you want to look forward to?</p>
+            <p className="m-0 text-[15px] leading-[1.55] text-muted">
+              {suggest ? `${suggest.title} is still waiting for a date.` : "Is there something you want to look forward to?"}
+            </p>
+            {!readOnly ? (
+              <ButtonLink href={suggest ? `/plans/new?pin=${suggest.id}` : "/plans/new"} variant="secondary" className="mx-auto mt-2 w-auto px-5">
+                {suggest ? `Plan ${suggest.title}` : "Plan something"}
+              </ButtonLink>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
