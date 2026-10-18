@@ -67,7 +67,7 @@ func (s *Server) rateLimit(next http.Handler) http.Handler {
 	reads := newLimiter(600, time.Minute)
 	writes := newLimiter(120, time.Minute)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/v1/live" || strings.HasPrefix(r.URL.Path, "/api/v1/media/") || r.URL.Path == "/healthz" {
+		if r.URL.Path == "/api/v1/live" || strings.HasPrefix(r.URL.Path, "/api/v1/media/") || strings.HasSuffix(r.URL.Path, "/stream") || r.URL.Path == "/healthz" {
 			next.ServeHTTP(w, r)
 			return
 		}

@@ -25,6 +25,14 @@ export function NoticeBanner({ notices, tz }: { notices: Notice[]; tz?: string }
                 </Link>
               </>
             ) : null}
+            {n.kind === "together_invite" ? (
+              <>
+                {n.payload.name || "They"} started Together: {n.payload.title}.{" "}
+                <Link href={`/together/${n.payload.sessionId}`} onClick={() => void markNoticeSeen(n.id).catch(() => {})} className="font-medium text-ink">
+                  Join
+                </Link>
+              </>
+            ) : null}
             {n.kind === "plan_answer" ? (
               <>
                 {n.payload.answer === "accepted"

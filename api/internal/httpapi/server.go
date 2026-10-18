@@ -30,6 +30,7 @@ import (
 	"betweenus/api/internal/push"
 	"betweenus/api/internal/store"
 	"betweenus/api/internal/story"
+	"betweenus/api/internal/together"
 	"betweenus/api/internal/token"
 	"betweenus/api/internal/unfurl"
 )
@@ -67,6 +68,8 @@ type Server struct {
 	notes  *notes.Service
 	jobs   *jobs.Runner
 	made   *made.Service
+
+	together *together.Service
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
@@ -74,6 +77,7 @@ func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *p
 		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log),
 		unfurl: unfurl.New(), notes: notes.NewService(pool), jobs: jobs.NewRunner(pool, log)}
 	s.made = made.NewService(pool, s.media)
+	s.together = together.NewService(pool)
 	return s
 }
 
@@ -181,6 +185,12 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/creations/{id}/download", s.handleCreationDownload)
 			r.Post("/creations/{id}/links", s.handleCreateLink)
 			r.Post("/creations/{id}/links/{linkId}/revoke", s.handleRevokeLink)
+			r.Get("/together", s.handleTogetherCurrent)
+			r.Post("/together", s.handleTogetherStart)
+			r.Get("/together/{id}", s.handleTogetherGet)
+			r.Get("/together/{id}/stream", s.handleTogetherStream)
+			r.Post("/together/{id}/act", s.handleTogetherAct)
+			r.Post("/together/{id}/say", s.handleTogetherSay)
 		})
 	})
 	return r
@@ -389,6 +399,14 @@ func (s *Server) domainError(w http.ResponseWriter, r *http.Request, err error) 
 		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
 	case errors.Is(err, boards.ErrBoardRequired):
 		writeError(w, http.StatusBadRequest, "board_required", "Choose a board, or make a new one.")
+	case errors.Is(err, together.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That session isn’t here any more.")
+	case errors.Is(err, together.ErrInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
+	case errors.Is(err, together.ErrEnded):
+		writeError(w, http.StatusGone, "together_ended", "This session has ended.")
+	case errors.Is(err, together.ErrNotBothHere):
+		writeError(w, http.StatusConflict, "not_both_here", "Waiting for both of you to be here.")
 	case errors.Is(err, made.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "That isn’t here any more.")
 	case errors.Is(err, made.ErrInvalid):

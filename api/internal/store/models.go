@@ -273,6 +273,21 @@ type ShareLink struct {
 	CreatedAt      time.Time
 }
 
+type TogetherSession struct {
+	ID             uuid.UUID
+	RelationshipID uuid.UUID
+	StartedBy      uuid.UUID
+	Title          string
+	Url            *string
+	Status         string
+	PositionMs     int64
+	PositionAt     time.Time
+	PausedReason   *string
+	UpdatedBy      *uuid.UUID
+	CreatedAt      time.Time
+	EndedAt        *time.Time
+}
+
 type User struct {
 	ID                    uuid.UUID
 	PhoneE164             *string

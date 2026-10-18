@@ -8,7 +8,7 @@ import { NoticeBanner } from "@/components/notice-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { PinCard } from "@/components/pin-card";
 import { Avatar, ButtonLink, Frames, Loading, Screen } from "@/components/ui";
-import { api, cityOf, homeFor, partnerOf, timeIn, type Note, type Pin, type Plan } from "@/lib/api";
+import { api, cityOf, homeFor, partnerOf, timeIn, type Note, type Pin, type Plan, type TogetherSession } from "@/lib/api";
 import { opensLabel } from "@/components/note-letter";
 import { fmt, theirTime, timeOnly } from "@/lib/time";
 import { useMe } from "@/lib/use-me";
@@ -32,6 +32,7 @@ export default function OurSpace() {
   const [newPins, setNewPins] = useState<Pin[] | null>(null);
   const [nextPlan, setNextPlan] = useState<{ plan: Plan; at: string } | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [together, setTogether] = useState<TogetherSession | null>(null);
   const [now, setNow] = useState(() => new Date());
 
   const readOnly = !!me && !me.space && !!me.readOnlySpace;
@@ -39,7 +40,7 @@ export default function OurSpace() {
     if (me && me.space?.status !== "active" && !readOnly) router.replace(homeFor(me));
   }, [me, router, readOnly]);
 
-  const tick = useLiveTick(["pin.", "plan.", "note."], me?.space?.status === "active");
+  const tick = useLiveTick(["pin.", "plan.", "note.", "together."], me?.space?.status === "active");
   const spaceTick = useLiveTick(["space.", "notice.", "note."], !!me?.space);
   useEffect(() => {
     if (spaceTick) void reload();
@@ -59,6 +60,9 @@ export default function OurSpace() {
       .catch(() => {});
     api<{ notes: Note[] }>("/notes")
       .then((r) => setNotes(r.notes))
+      .catch(() => {});
+    api<{ session: TogetherSession | null }>("/together")
+      .then((r) => setTogether(r.session))
       .catch(() => {});
   }, [me, tick]);
 
@@ -204,6 +208,27 @@ export default function OurSpace() {
           </div>
         </article>
       ) : null}
+
+      <Link
+        href={together ? `/together/${together.id}` : "/together"}
+        className={`flex items-center gap-3.5 rounded-(--radius-card) px-4 py-3.5 no-underline ${together ? "bg-[#2E2329] text-[#F3EBE1]" : "border border-line bg-surface text-ink"}`}
+      >
+        <span className="flex size-11 flex-none items-center justify-center rounded-full bg-shared-wash text-shared-ink" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 5.5v13l11-6.5z" />
+          </svg>
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="truncate text-[15px] font-semibold">{together ? `Together: ${together.title}` : "Watch or listen together"}</span>
+          <span className={`text-[13px] ${together ? "text-[#C2B5AB]" : "text-muted"}`}>
+            {together
+              ? together.startedBy === me.user.id
+                ? `Waiting for ${partner?.displayName || "them"} · tap to go back in`
+                : `${partner?.displayName || "They"} started it · tap to join`
+              : "Start at the same moment, pause for both"}
+          </span>
+        </span>
+      </Link>
 
       {(() => {
         const waiting = notes.filter((n) => n.state === "waiting").sort((a, b) => (a.deliverAt ?? "").localeCompare(b.deliverAt ?? ""));

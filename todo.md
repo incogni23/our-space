@@ -28,7 +28,7 @@ Design tokens: `design/tokens.json`, `design/tokens.css` (v0.1, match canvas 4.1
 | Database | PostgreSQL 16 |
 | DB access | pgx v5 + sqlc |
 | Migrations | goose (SQL files in `db/migrations`) |
-| Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; WebSockets later for Together sessions |
+| Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; Together sessions use SSE + POST (in-memory presence, single instance for now) |
 | Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) — `api/internal/jobs` |
 | Media | S3-compatible object storage (MinIO locally) |
 | Calls | Managed WebRTC (later) |
@@ -172,7 +172,8 @@ Kept in sync with the canvas (5.2 States, 5.4 Product calls, 4.3 Content, protot
 - [ ] Screen-reader pass on a real device (VoiceOver/TalkBack)
 - [x] Authorization review of every route (all content scoped to the caller's space; fixed: DELETE requests were refused by the JSON guard)
 - [x] Audit log of sensitive actions: sign-in, recovery code used, start fresh, number changed, recovery codes regenerated, space created/joined/left
-- [ ] Together prototype (shared playback; WebSockets)
+- [x] Together v1 (5.4 #04): start a session (title + optional link), partner invited (notice + push), presence only inside the session and never stored, shared 3-2-1 start, pause/resume/±10s for both, auto-pause when a partner's connection drops (held 5 min, 5.2), messages not saved. SSE + POST instead of WebSockets (works through the proxy)
+- [ ] Together: true sync with providers (later); multi-instance presence
 
 ## Phase 6b · Subscription (do last, before beta) (canvas row H, handoff 5.5)
 
@@ -215,6 +216,10 @@ UI
 - [ ] Calls via managed WebRTC
 
 ---
+
+## Ideas (not on the canvas)
+
+- Chat between the two of you, beyond notes and pin notes (maybe). Open questions: always-on thread vs. tied to plans/pins; read receipts consistent with notes; how it fits "no global presence" (5.4).
 
 ## Open questions
 

@@ -83,7 +83,22 @@ export type Notice =
   | { id: string; kind: "partner_number_updated"; createdAt: string; payload: { name: string } }
   | { id: string; kind: "note_delivered"; createdAt: string; payload: { noteId: string; fromName: string } }
   | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } }
-  | { id: string; kind: "plan_answer"; createdAt: string; payload: { planId: string; title: string; answer: "accepted" | "declined" | "suggested"; name: string; at: string } };
+  | { id: string; kind: "plan_answer"; createdAt: string; payload: { planId: string; title: string; answer: "accepted" | "declined" | "suggested"; name: string; at: string } }
+  | { id: string; kind: "together_invite"; createdAt: string; payload: { sessionId: string; title: string; name: string } };
+
+export type TogetherSession = {
+  id: string;
+  startedBy: string;
+  title: string;
+  url?: string;
+  status: "waiting" | "playing" | "paused" | "ended";
+  positionMs: number;
+  positionAt: string;
+  pausedReason?: "someone" | "connection";
+  updatedBy?: string;
+  endedAt?: string;
+  serverNow: string;
+};
 
 export type Note = {
   id: string;
