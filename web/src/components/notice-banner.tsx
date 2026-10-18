@@ -24,6 +24,19 @@ export function NoticeBanner({ notices, tz }: { notices: Notice[]; tz?: string }
                 <span className="font-hand text-[19px] text-accent-ink">{familyName(n.payload.palette).toLowerCase()}</span>.
               </>
             ) : null}
+            {n.kind === "note_hearted" ? (
+              <>
+                <span className="text-accent">♥</span> {n.payload.name || "Your person"} hearted your letter.{" "}
+                <Link href={`/notes/${n.payload.noteId}`} onClick={() => void markNoticeSeen(n.id).catch(() => {})} className="font-medium text-ink">
+                  See it
+                </Link>
+              </>
+            ) : null}
+            {n.kind === "song_changed" ? (
+              <>
+                {n.payload.name || "Your person"} made <span className="font-display font-bold italic">{n.payload.title}</span> your song.
+              </>
+            ) : null}
             {n.kind === "note_delivered" ? (
               <>
                 A note from {n.payload.fromName || "your person"} is here.{" "}

@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { opensLabel } from "@/components/note-letter";
 import { NoteForm, toPayload, type NoteDraft } from "@/components/note-form";
 import { Kicker, StatusStamp } from "@/components/print";
-import { Button, ButtonLink, ErrorText, Heart, Loading, Screen, cx } from "@/components/ui";
+import { Button, ButtonLink, ErrorText, HEART, Heart, Loading, Screen, cx } from "@/components/ui";
 import { api, cityOf, errorMessage, type Note } from "@/lib/api";
 import { issueNoFor } from "@/lib/issue";
 import { inkColor } from "@/lib/theme";
@@ -85,6 +85,17 @@ export default function NoteDetail() {
       await api(`/notes/${id}/keep`, { body: { keep: k } });
       setNote({ ...note!, kept: k });
     } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function heart(h: boolean) {
+    const prev = note!.hearted;
+    setNote({ ...note!, hearted: h });
+    try {
+      await api(`/notes/${id}/heart`, { body: { heart: h } });
+    } catch (err) {
+      setNote({ ...note!, hearted: prev });
       setError(errorMessage(err));
     }
   }
@@ -246,6 +257,11 @@ export default function NoteDetail() {
                 {dayLong(note.readAt, myTz)}, {timeOnly(note.readAt, myTz)}
                 {pTz !== myTz ? <span className="text-muted"> · {timeOnly(note.readAt, pTz)} for {pName}</span> : null}
               </span>
+              {note.heartedAt ? (
+                <span className="ml-auto flex items-center gap-1 font-hand text-xl text-accent-ink" title={`Hearted ${dayLong(note.heartedAt, myTz)}, ${timeOnly(note.heartedAt, myTz)}`}>
+                  <Heart size={16} /> hearted
+                </span>
+              ) : null}
             </>
           ) : (
             <>
@@ -260,6 +276,20 @@ export default function NoteDetail() {
         <div className="flex flex-col gap-2">
           {!readOnly ? (
             <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => heart(!note.hearted)}
+                aria-pressed={!!note.hearted}
+                className={cx(
+                  "flex min-h-[50px] flex-none items-center gap-1.5 rounded-[25px] border-[1.5px] border-ink px-4 text-sm font-medium text-ink transition-transform duration-(--dur-base) active:scale-95",
+                  note.hearted ? "bg-petal" : "bg-transparent",
+                )}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d={HEART} fill={note.hearted ? "var(--accent)" : "none"} stroke="currentColor" strokeWidth="1.6" />
+                </svg>
+                {note.hearted ? "Sent" : "Heart"}
+              </button>
               <Button variant="secondary" onClick={() => keep(!note.kept)} aria-pressed={!!note.kept} className="min-h-[50px] text-sm">
                 {note.kept ? "Kept in Our Story ♡" : "Keep in Our Story"}
               </Button>

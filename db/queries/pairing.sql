@@ -107,3 +107,11 @@ UPDATE relationships SET palette = $2 WHERE id = $1 AND status = 'active';
 
 -- name: SetInk :exec
 UPDATE users SET ink = $2, updated_at = now() WHERE id = $1;
+
+-- name: SetSong :exec
+UPDATE relationships SET song_pin_id = sqlc.narg(pin_id) WHERE id = @id AND status = 'active';
+
+-- name: SpaceSong :one
+SELECT p.id, p.title, p.url, p.note, p.kind, p.created_by
+FROM relationships r JOIN pins p ON p.id = r.song_pin_id
+WHERE r.id = $1 AND p.deleted_at IS NULL;

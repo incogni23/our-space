@@ -4,7 +4,7 @@ INSERT INTO user_notices (user_id, kind, payload, created_at) VALUES ($1, $2, $3
 -- name: UnseenNotices :many
 SELECT id, kind, payload, created_at FROM user_notices
 WHERE user_id = $1 AND seen_at IS NULL
-ORDER BY created_at
+ORDER BY created_at DESC
 LIMIT 20;
 
 -- name: MarkNoticeSeen :execrows
@@ -23,3 +23,9 @@ SELECT user_id FROM relationship_members WHERE relationship_id = $1 AND user_id 
 -- name: BumpSecondFactorAttempts :one
 UPDATE sessions SET second_factor_attempts = second_factor_attempts + 1 WHERE id = $1
 RETURNING second_factor_attempts;
+
+-- name: SeeSessionInvites :exec
+-- A Together invite stops mattering once the session ends or they walk in.
+UPDATE user_notices SET seen_at = now()
+WHERE kind = 'together_invite' AND payload->>'sessionId' = @session_id::text AND seen_at IS NULL
+  AND (sqlc.narg(user_id)::uuid IS NULL OR user_id = sqlc.narg(user_id)::uuid);

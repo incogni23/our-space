@@ -120,6 +120,7 @@ func (s *Server) handleTogetherAct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if sess.Status == "ended" {
+		_ = store.New(s.pool).SeeSessionInvites(r.Context(), store.SeeSessionInvitesParams{SessionID: id.String()})
 		s.publish(r, sc.SpaceID, "together.ended", id.String())
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -164,6 +165,8 @@ func (s *Server) handleTogetherStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer leave()
+	uid := sc.UserID
+	_ = store.New(s.pool).SeeSessionInvites(r.Context(), store.SeeSessionInvitesParams{SessionID: id.String(), UserID: &uid})
 	rc := http.NewResponseController(w)
 	_ = rc.SetWriteDeadline(time.Time{})
 	w.Header().Set("Content-Type", "text/event-stream")

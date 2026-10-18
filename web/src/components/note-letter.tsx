@@ -84,6 +84,7 @@ export function NoteLetter({
               : `Delivered ${dayShort(note.deliveredAt!, myTz)} · sealed`
             : `From ${partnerName} · ${dayShort(note.deliveredAt!, myTz)}`}
           {note.kept ? " · kept" : ""}
+          {note.heartedAt || note.hearted ? <span className="text-accent"> · ♥</span> : null}
         </span>
       </span>
     </Link>

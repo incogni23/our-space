@@ -120,10 +120,27 @@ func (q *Queries) PartnerIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID
 	return items, nil
 }
 
+const seeSessionInvites = `-- name: SeeSessionInvites :exec
+UPDATE user_notices SET seen_at = now()
+WHERE kind = 'together_invite' AND payload->>'sessionId' = $1::text AND seen_at IS NULL
+  AND ($2::uuid IS NULL OR user_id = $2::uuid)
+`
+
+type SeeSessionInvitesParams struct {
+	SessionID string
+	UserID    *uuid.UUID
+}
+
+// A Together invite stops mattering once the session ends or they walk in.
+func (q *Queries) SeeSessionInvites(ctx context.Context, arg SeeSessionInvitesParams) error {
+	_, err := q.db.Exec(ctx, seeSessionInvites, arg.SessionID, arg.UserID)
+	return err
+}
+
 const unseenNotices = `-- name: UnseenNotices :many
 SELECT id, kind, payload, created_at FROM user_notices
 WHERE user_id = $1 AND seen_at IS NULL
-ORDER BY created_at
+ORDER BY created_at DESC
 LIMIT 20
 `
 

@@ -55,6 +55,8 @@ type View struct {
 	ReadAt      *time.Time // author: when the recipient first opened it
 	Opened      *bool      // recipient only
 	Kept        *bool      // recipient only
+	Hearted     *bool      // recipient only
+	HeartedAt   *time.Time // author: when the recipient hearted it
 	CreatedAt   time.Time
 }
 
@@ -66,10 +68,11 @@ func view(n store.Note, me uuid.UUID) View {
 		v.Body = &b
 		if n.State == "delivered" {
 			v.ReadAt = n.OpenedAt
+			v.HeartedAt = n.HeartedAt
 		}
 	case n.State == "delivered":
-		b, opened, kept := n.Body, n.OpenedAt != nil, n.Kept
-		v.Body, v.Opened, v.Kept = &b, &opened, &kept
+		b, opened, kept, hearted := n.Body, n.OpenedAt != nil, n.Kept, n.HeartedAt != nil
+		v.Body, v.Opened, v.Kept, v.Hearted = &b, &opened, &kept, &hearted
 	default:
 		v.State = "waiting" // sealed: who and when only
 	}
@@ -264,6 +267,26 @@ func (s *Service) Keep(ctx context.Context, sc Scope, id uuid.UUID, keep bool) e
 		return err
 	}
 	return store.New(s.pool).KeepNote(ctx, store.KeepNoteParams{ID: id, RecipientID: sc.UserID, Kept: keep})
+}
+
+// Heart is the reader's one reaction to a letter, after breaking the seal.
+func (s *Service) Heart(ctx context.Context, sc Scope, id uuid.UUID, heart bool) (store.Note, error) {
+	q := store.New(s.pool)
+	n, err := q.GetNote(ctx, store.GetNoteParams{ID: id, RelationshipID: sc.SpaceID})
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && n.RecipientID != sc.UserID) {
+		return store.Note{}, ErrNotForThem
+	}
+	if err != nil {
+		return store.Note{}, err
+	}
+	rows, err := q.HeartNote(ctx, store.HeartNoteParams{Heart: heart, ID: id, RecipientID: sc.UserID})
+	if err != nil {
+		return store.Note{}, err
+	}
+	if rows == 0 {
+		return store.Note{}, ErrNotForThem // not delivered, or the seal isn't broken yet
+	}
+	return n, nil
 }
 
 // Deliver is the job handler body: returns the delivered note, or ok=false if it

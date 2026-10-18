@@ -57,6 +57,7 @@ type spaceJSON struct {
 	Name        string           `json:"name"`
 	Status      string           `json:"status"`
 	Palette     string           `json:"palette"`
+	Song        *songJSON        `json:"song,omitempty"`
 	ActivatedAt *time.Time       `json:"activatedAt,omitempty"`
 	Members     []memberJSON     `json:"members"`
 	Invite      *inviteStateJSON `json:"invite,omitempty"`
@@ -193,7 +194,11 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	sp, err := s.pairing.CurrentSpace(r.Context(), uid)
 	switch {
 	case err == nil:
-		out["space"] = toSpace(sp)
+		js := toSpace(sp)
+		if sp.Relationship.Status == "active" {
+			js.Song = s.spaceSong(r, sp.Relationship.ID)
+		}
+		out["space"] = js
 	case errors.Is(err, pairing.ErrNotInSpace):
 		out["space"] = nil
 		if ro, err := s.boards.ResolveRead(r.Context(), uid); err == nil && ro.ReadOnly {

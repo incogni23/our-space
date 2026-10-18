@@ -175,6 +175,8 @@ func (s *Server) Routes() http.Handler {
 			r.Delete("/notes/{id}", s.handleDeleteNote)
 			r.Post("/notes/{id}/keep", s.handleKeepNote)
 			r.Post("/notes/{id}/open", s.handleOpenNote)
+			r.Post("/notes/{id}/heart", s.handleHeartNote)
+			r.Post("/space/song", s.handleSetSong)
 			r.Get("/creations", s.handleListCreations)
 			r.Post("/creations", s.handleCreateCreation)
 			r.Get("/creations/{id}", s.handleGetCreation)

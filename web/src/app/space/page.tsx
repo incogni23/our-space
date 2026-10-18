@@ -8,9 +8,10 @@ import { NoticeBanner } from "@/components/notice-banner";
 import { opensLabel } from "@/components/note-letter";
 import { FamilyGrid, PaletteDots, usePalette } from "@/components/palette-picker";
 import { Film, Polaroid, SpinStamp } from "@/components/print";
+import { mediaOf } from "@/components/synced-player";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { ButtonLink, Heart, Loading, PrintTitle, Rule, Screen, Tape, cx } from "@/components/ui";
-import { api, cityOf, homeFor, partnerOf, photoUrl, type Member, type Memory, type Note, type Pin, type Plan, type TogetherSession, type User } from "@/lib/api";
+import { ApiError, api, cityOf, homeFor, partnerOf, photoUrl, type Member, type Memory, type Note, type Pin, type Plan, type Song, type TogetherSession, type User } from "@/lib/api";
 import { issueOf, roman, sinceOf } from "@/lib/issue";
 import { useLiveTick } from "@/lib/live";
 import { inkColor } from "@/lib/theme";
@@ -60,6 +61,69 @@ function Initial({ p, color }: { p: User | Member; color: string }) {
     >
       {(p.displayName || "?").slice(0, 1).toUpperCase()}
     </span>
+  );
+}
+
+/** Together, or "our song" when one is picked: Listen together starts it in step. */
+function TogetherCard({ together, song, meId, pName, ink }: { together: TogetherSession | null; song?: Song; meId: string; pName: string; ink: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const playable = !!song?.url && !!mediaOf(song.url);
+  async function listen() {
+    if (!song) return;
+    setBusy(true);
+    try {
+      const r = await api<{ session: TogetherSession }>("/together", { body: { title: song.title, url: playable ? song.url : "" } });
+      router.push(`/together/${r.session.id}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "together_open") {
+        const cur = await api<{ session: TogetherSession | null }>("/together").catch(() => null);
+        if (cur?.session) return router.push(`/together/${cur.session.id}`);
+      }
+      setBusy(false);
+    }
+  }
+  const showSong = !together && song;
+  const body = (
+    <>
+      <div
+        className={cx("flex size-24 flex-none items-center justify-center rounded-full bg-[repeating-radial-gradient(circle,#151112_0_2px,#2A2426_2px_4px)]", (together?.status === "playing" || busy) && "bu-rec")}
+        aria-hidden="true"
+      >
+        <div className="flex size-[34px] items-center justify-center rounded-full bg-accent">
+          <div className="size-[5px] rounded-full bg-paper" />
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="font-type text-[10.5px] tracking-[0.16em] text-accent-ink">{showSong ? "OUR SONG" : "TOGETHER"}</span>
+        <span className="truncate font-display text-[26px] font-bold italic leading-none">{together ? together.title : song ? song.title : "Press play at once"}</span>
+        {showSong && song.note ? (
+          <span className="truncate font-hand text-lg leading-none" style={{ color: ink }}>
+            {song.note}
+          </span>
+        ) : (
+          <span className="text-[13px] text-muted">
+            {together ? (together.startedBy === meId ? `Waiting for ${pName}` : `${pName} started it`) : "Watch or listen, paused for both"}
+          </span>
+        )}
+        <span className="mt-1 flex min-h-10 items-center self-start rounded-[20px] bg-nav px-3.5 text-[13px] font-medium text-nav-text">
+          {together ? (together.startedBy === meId ? "Go back in" : "Join") : busy ? "Starting…" : "Listen together"}
+        </span>
+      </div>
+    </>
+  );
+  const cls = "flex w-full items-center gap-4 rounded-[20px] bg-paper px-4 py-3.5 text-left text-ink no-underline shadow-[0_12px_24px_-16px_rgba(0,0,0,0.4)]";
+  if (showSong) {
+    return (
+      <button type="button" onClick={listen} disabled={busy} aria-label={`Listen to ${song.title} together`} className={cls}>
+        {body}
+      </button>
+    );
+  }
+  return (
+    <Link href={together ? `/together/${together.id}` : "/together"} className={cls}>
+      {body}
+    </Link>
   );
 }
 
@@ -389,33 +453,7 @@ export default function OurSpace() {
         </section>
   
       <div className="hidden lg:block">
-        <Link
-          href={together ? `/together/${together.id}` : "/together"}
-          className="flex items-center gap-4 rounded-[20px] bg-paper px-4 py-3.5 text-ink no-underline shadow-[0_12px_24px_-16px_rgba(0,0,0,0.4)]"
-        >
-          <div
-            className={cx("flex size-24 flex-none items-center justify-center rounded-full bg-[repeating-radial-gradient(circle,#151112_0_2px,#2A2426_2px_4px)]", together?.status === "playing" && "bu-rec")}
-            aria-hidden="true"
-          >
-            <div className="flex size-[34px] items-center justify-center rounded-full bg-accent">
-              <div className="size-[5px] rounded-full bg-paper" />
-            </div>
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="font-type text-[10.5px] tracking-[0.16em] text-accent-ink">TOGETHER</span>
-            <span className="truncate font-display text-[26px] font-bold italic leading-none">{together ? together.title : "Press play at once"}</span>
-            <span className="text-[13px] text-muted">
-              {together
-                ? together.startedBy === me.user.id
-                  ? `Waiting for ${pName}`
-                  : `${pName} started it`
-                : "Watch or listen, paused for both"}
-            </span>
-            <span className="mt-1 flex min-h-10 items-center self-start rounded-[20px] bg-nav px-3.5 text-[13px] font-medium text-nav-text">
-              {together ? (together.startedBy === me.user.id ? "Go back in" : "Join") : "Listen together"}
-            </span>
-          </div>
-        </Link>
+        <TogetherCard together={together} song={me.space.song} meId={me.user.id} pName={pName} ink={me.space.song ? (me.space.song.createdBy === me.user.id ? myInk : theirInk) : myInk} />
   
       </div>
         </div>
@@ -514,33 +552,7 @@ export default function OurSpace() {
       </section>
 
       <div className="lg:hidden">
-      <Link
-        href={together ? `/together/${together.id}` : "/together"}
-        className="flex items-center gap-4 rounded-[20px] bg-paper px-4 py-3.5 text-ink no-underline shadow-[0_12px_24px_-16px_rgba(0,0,0,0.4)]"
-      >
-        <div
-          className={cx("flex size-24 flex-none items-center justify-center rounded-full bg-[repeating-radial-gradient(circle,#151112_0_2px,#2A2426_2px_4px)]", together?.status === "playing" && "bu-rec")}
-          aria-hidden="true"
-        >
-          <div className="flex size-[34px] items-center justify-center rounded-full bg-accent">
-            <div className="size-[5px] rounded-full bg-paper" />
-          </div>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="font-type text-[10.5px] tracking-[0.16em] text-accent-ink">TOGETHER</span>
-          <span className="truncate font-display text-[26px] font-bold italic leading-none">{together ? together.title : "Press play at once"}</span>
-          <span className="text-[13px] text-muted">
-            {together
-              ? together.startedBy === me.user.id
-                ? `Waiting for ${pName}`
-                : `${pName} started it`
-              : "Watch or listen, paused for both"}
-          </span>
-          <span className="mt-1 flex min-h-10 items-center self-start rounded-[20px] bg-nav px-3.5 text-[13px] font-medium text-nav-text">
-            {together ? (together.startedBy === me.user.id ? "Go back in" : "Join") : "Listen together"}
-          </span>
-        </div>
-      </Link>
+      <TogetherCard together={together} song={me.space.song} meId={me.user.id} pName={pName} ink={me.space.song ? (me.space.song.createdBy === me.user.id ? myInk : theirInk) : myInk} />
 
       </div>
 

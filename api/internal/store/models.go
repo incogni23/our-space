@@ -120,6 +120,7 @@ type Note struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      *time.Time
+	HeartedAt      *time.Time
 }
 
 type PhoneVerification struct {
@@ -226,6 +227,7 @@ type Relationship struct {
 	ReadOnlyUntil *time.Time
 	PurgedAt      *time.Time
 	Palette       string
+	SongPinID     *uuid.UUID
 }
 
 type RelationshipInvitation struct {

@@ -72,10 +72,14 @@ export type Space = {
   name: string;
   status: "pending" | "active";
   palette: Family;
+  song?: Song;
   activatedAt?: string;
   members: Member[];
   invite?: { state: "waiting" | "not_accepted"; inviteeName: string; expiresAt: string };
 };
+
+/** The space's song: a pin either of you picked. */
+export type Song = { pinId: string; title: string; url?: string; note?: string; kind: string; createdBy: string };
 
 export type Notice =
   | {
@@ -89,7 +93,9 @@ export type Notice =
   | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } }
   | { id: string; kind: "plan_answer"; createdAt: string; payload: { planId: string; title: string; answer: "accepted" | "declined" | "suggested"; name: string; at: string } }
   | { id: string; kind: "together_invite"; createdAt: string; payload: { sessionId: string; title: string; name: string } }
-  | { id: string; kind: "palette_changed"; createdAt: string; payload: { palette: Family; name: string } };
+  | { id: string; kind: "palette_changed"; createdAt: string; payload: { palette: Family; name: string } }
+  | { id: string; kind: "note_hearted"; createdAt: string; payload: { noteId: string; name: string } }
+  | { id: string; kind: "song_changed"; createdAt: string; payload: { pinId: string; title: string; name: string } };
 
 export type TogetherSession = {
   id: string;
@@ -117,6 +123,10 @@ export type Note = {
   readAt?: string;
   opened?: boolean;
   kept?: boolean;
+  /** Reader: they hearted it. */
+  hearted?: boolean;
+  /** Writer only: when it was hearted. */
+  heartedAt?: string;
   createdAt: string;
 };
 

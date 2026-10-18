@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"betweenus/api/internal/notes"
+	"betweenus/api/internal/store"
 )
 
 type noteJSON struct {
@@ -20,13 +21,15 @@ type noteJSON struct {
 	ReadAt      *time.Time `json:"readAt,omitempty"`
 	Opened      *bool      `json:"opened,omitempty"`
 	Kept        *bool      `json:"kept,omitempty"`
+	Hearted     *bool      `json:"hearted,omitempty"`
+	HeartedAt   *time.Time `json:"heartedAt,omitempty"`
 	CreatedAt   time.Time  `json:"createdAt"`
 }
 
 func toNote(v notes.View) noteJSON {
 	return noteJSON{
 		ID: v.ID.String(), Mine: v.Mine, State: v.State, Body: v.Body, DeliverAt: v.DeliverAt, DeliverTz: v.DeliverTz,
-		DeliveredAt: v.DeliveredAt, ReadAt: v.ReadAt, Opened: v.Opened, Kept: v.Kept, CreatedAt: v.CreatedAt,
+		DeliveredAt: v.DeliveredAt, ReadAt: v.ReadAt, Opened: v.Opened, Kept: v.Kept, Hearted: v.Hearted, HeartedAt: v.HeartedAt, CreatedAt: v.CreatedAt,
 	}
 }
 
@@ -163,6 +166,37 @@ func (s *Server) handleDeleteNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.publish(r, sc.SpaceID, "note.deleted", id.String())
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// POST /notes/{id}/heart — the reader hearts (or un-hearts) a letter they opened.
+func (s *Server) handleHeartNote(w http.ResponseWriter, r *http.Request) {
+	sc, ok := s.noteScope(w, r, true)
+	if !ok {
+		return
+	}
+	id, ok := parseUUID(w, chi.URLParam(r, "id"))
+	if !ok {
+		return
+	}
+	var in struct {
+		Heart bool `json:"heart"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	n, err := s.notes.Heart(r.Context(), sc, id, in.Heart)
+	if err != nil {
+		s.domainError(w, r, err)
+		return
+	}
+	if in.Heart && n.HeartedAt == nil {
+		q := store.New(s.pool)
+		if me, err := q.GetUser(r.Context(), sc.UserID); err == nil {
+			_ = s.notice(r.Context(), q, n.AuthorID, "note_hearted", map[string]string{"noteId": id.String(), "name": me.DisplayName})
+		}
+	}
+	s.publish(r, sc.SpaceID, "note.hearted", id.String())
 	w.WriteHeader(http.StatusNoContent)
 }
 

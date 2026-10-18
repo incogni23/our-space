@@ -109,7 +109,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 const createRelationship = `-- name: CreateRelationship :one
 INSERT INTO relationships (name, created_by)
 VALUES ($1, $2)
-RETURNING id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette
+RETURNING id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette, song_pin_id
 `
 
 type CreateRelationshipParams struct {
@@ -132,6 +132,7 @@ func (q *Queries) CreateRelationship(ctx context.Context, arg CreateRelationship
 		&i.ReadOnlyUntil,
 		&i.PurgedAt,
 		&i.Palette,
+		&i.SongPinID,
 	)
 	return i, err
 }
@@ -274,7 +275,7 @@ func (q *Queries) GetLatestInvitation(ctx context.Context, relationshipID uuid.U
 }
 
 const getRelationshipForUpdate = `-- name: GetRelationshipForUpdate :one
-SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette FROM relationships WHERE id = $1 FOR UPDATE
+SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette, song_pin_id FROM relationships WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (Relationship, error) {
@@ -292,6 +293,7 @@ func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (R
 		&i.ReadOnlyUntil,
 		&i.PurgedAt,
 		&i.Palette,
+		&i.SongPinID,
 	)
 	return i, err
 }
@@ -532,6 +534,49 @@ type SetPaletteParams struct {
 func (q *Queries) SetPalette(ctx context.Context, arg SetPaletteParams) error {
 	_, err := q.db.Exec(ctx, setPalette, arg.ID, arg.Palette)
 	return err
+}
+
+const setSong = `-- name: SetSong :exec
+UPDATE relationships SET song_pin_id = $1 WHERE id = $2 AND status = 'active'
+`
+
+type SetSongParams struct {
+	PinID *uuid.UUID
+	ID    uuid.UUID
+}
+
+func (q *Queries) SetSong(ctx context.Context, arg SetSongParams) error {
+	_, err := q.db.Exec(ctx, setSong, arg.PinID, arg.ID)
+	return err
+}
+
+const spaceSong = `-- name: SpaceSong :one
+SELECT p.id, p.title, p.url, p.note, p.kind, p.created_by
+FROM relationships r JOIN pins p ON p.id = r.song_pin_id
+WHERE r.id = $1 AND p.deleted_at IS NULL
+`
+
+type SpaceSongRow struct {
+	ID        uuid.UUID
+	Title     string
+	Url       *string
+	Note      string
+	Kind      string
+	CreatedBy uuid.UUID
+}
+
+func (q *Queries) SpaceSong(ctx context.Context, id uuid.UUID) (SpaceSongRow, error) {
+	row := q.db.QueryRow(ctx, spaceSong, id)
+	var i SpaceSongRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Note,
+		&i.Kind,
+		&i.CreatedBy,
+	)
+	return i, err
 }
 
 const unlinkRelationship = `-- name: UnlinkRelationship :exec

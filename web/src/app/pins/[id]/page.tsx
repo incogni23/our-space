@@ -23,7 +23,21 @@ const STATUSES: Array<{ id: PinStatus; label: string }> = [
 export default function PinDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { ready, me, people, partner, readOnly } = useSpace();
+  const { ready, me, people, partner, readOnly, reload } = useSpace();
+  const [songBusy, setSongBusy] = useState(false);
+  const isOurSong = !!me?.space?.song && me.space.song.pinId === id;
+
+  async function setSong(pinId: string | null) {
+    setSongBusy(true);
+    try {
+      await api("/space/song", { body: { pinId } });
+      await reload();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSongBusy(false);
+    }
+  }
   const tick = useLiveTick(["pin."], ready);
   const [pin, setPin] = useState<Pin | null>(null);
   const [notes, setNotes] = useState<PinNote[]>([]);
@@ -135,7 +149,7 @@ export default function PinDetail() {
       {readOnly ? null : (
       <Link
         href={`/plans/new?pin=${pin.id}`}
-        className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline"
+        className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-(--radius-button) bg-action text-base font-medium text-action-text no-underline"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
           <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
@@ -150,13 +164,37 @@ export default function PinDetail() {
           href={pin.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-12 items-center justify-center gap-2 rounded-(--radius-control) bg-paper shadow-(--shadow-paper) text-sm font-medium text-ink no-underline"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-(--radius-button) border-[1.5px] border-ink text-sm font-medium text-ink no-underline"
         >
           {pin.kind === "place" ? "Open in Maps" : pin.kind === "song" ? "Open to listen" : "Open link"}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
           </svg>
         </a>
+      ) : null}
+
+      {pin.url && (pin.kind === "song" || pin.kind === "link") && !readOnly ? (
+        isOurSong ? (
+          <div className="flex items-center gap-3 rounded-[20px] bg-paper px-4 py-3 shadow-(--shadow-paper)">
+            <span className="size-10 flex-none rounded-full bg-[repeating-radial-gradient(circle,#151112_0_2px,#2A2426_2px_4px)]" aria-hidden="true" />
+            <span className="flex flex-1 flex-col">
+              <span className="font-type text-[10.5px] tracking-[0.16em] text-accent-ink">OUR SONG ♥</span>
+              <span className="text-[13px] text-muted">It’s on the front of Our Space.</span>
+            </span>
+            <button type="button" onClick={() => setSong(null)} disabled={songBusy} className="min-h-11 px-1 text-[13px] font-medium text-ink underline underline-offset-[3px]">
+              Unpick
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSong(pin.id)}
+            disabled={songBusy}
+            className="flex min-h-12 items-center justify-center gap-2 rounded-(--radius-button) border-[1.5px] border-ink text-sm font-medium text-ink"
+          >
+            <span className="text-accent" aria-hidden="true">♥</span> Make this our song
+          </button>
+        )
       ) : null}
 
       <div className="flex flex-col gap-2">

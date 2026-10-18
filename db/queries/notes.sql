@@ -80,3 +80,8 @@ DELETE FROM media WHERE relationship_id = $1 RETURNING key_full, key_thumb;
 
 -- name: MarkPurged :exec
 UPDATE relationships SET purged_at = now() WHERE id = $1;
+
+-- name: HeartNote :execrows
+-- Only after the seal is broken; un-hearting clears it.
+UPDATE notes SET hearted_at = CASE WHEN @heart::bool THEN coalesce(hearted_at, now()) ELSE NULL END
+WHERE id = @id AND recipient_id = @recipient_id AND state = 'delivered' AND opened_at IS NOT NULL;

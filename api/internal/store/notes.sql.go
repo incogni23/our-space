@@ -15,7 +15,7 @@ import (
 const createNote = `-- name: CreateNote :one
 INSERT INTO notes (relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at
+RETURNING id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at, hearted_at
 `
 
 type CreateNoteParams struct {
@@ -54,6 +54,7 @@ func (q *Queries) CreateNote(ctx context.Context, arg CreateNoteParams) (Note, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.HeartedAt,
 	)
 	return i, err
 }
@@ -82,7 +83,7 @@ func (q *Queries) DeleteNote(ctx context.Context, arg DeleteNoteParams) (int64, 
 const deliverNote = `-- name: DeliverNote :one
 UPDATE notes SET state = 'delivered', delivered_at = now(), updated_at = now()
 WHERE id = $1 AND state = 'scheduled' AND deliver_at <= now() + interval '5 seconds' AND deleted_at IS NULL
-RETURNING id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at
+RETURNING id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at, hearted_at
 `
 
 func (q *Queries) DeliverNote(ctx context.Context, id uuid.UUID) (Note, error) {
@@ -103,12 +104,13 @@ func (q *Queries) DeliverNote(ctx context.Context, id uuid.UUID) (Note, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.HeartedAt,
 	)
 	return i, err
 }
 
 const getNote = `-- name: GetNote :one
-SELECT id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at FROM notes WHERE id = $1 AND relationship_id = $2 AND deleted_at IS NULL
+SELECT id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at, hearted_at FROM notes WHERE id = $1 AND relationship_id = $2 AND deleted_at IS NULL
 `
 
 type GetNoteParams struct {
@@ -134,12 +136,13 @@ func (q *Queries) GetNote(ctx context.Context, arg GetNoteParams) (Note, error) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.HeartedAt,
 	)
 	return i, err
 }
 
 const getNoteForUpdate = `-- name: GetNoteForUpdate :one
-SELECT id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at FROM notes WHERE id = $1 AND relationship_id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at, hearted_at FROM notes WHERE id = $1 AND relationship_id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type GetNoteForUpdateParams struct {
@@ -165,6 +168,7 @@ func (q *Queries) GetNoteForUpdate(ctx context.Context, arg GetNoteForUpdatePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.HeartedAt,
 	)
 	return i, err
 }
@@ -201,7 +205,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id uuid.UUID) (Plan, error) {
 }
 
 const getRelationship = `-- name: GetRelationship :one
-SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette FROM relationships WHERE id = $1
+SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette, song_pin_id FROM relationships WHERE id = $1
 `
 
 func (q *Queries) GetRelationship(ctx context.Context, id uuid.UUID) (Relationship, error) {
@@ -219,8 +223,29 @@ func (q *Queries) GetRelationship(ctx context.Context, id uuid.UUID) (Relationsh
 		&i.ReadOnlyUntil,
 		&i.PurgedAt,
 		&i.Palette,
+		&i.SongPinID,
 	)
 	return i, err
+}
+
+const heartNote = `-- name: HeartNote :execrows
+UPDATE notes SET hearted_at = CASE WHEN $1::bool THEN coalesce(hearted_at, now()) ELSE NULL END
+WHERE id = $2 AND recipient_id = $3 AND state = 'delivered' AND opened_at IS NOT NULL
+`
+
+type HeartNoteParams struct {
+	Heart       bool
+	ID          uuid.UUID
+	RecipientID uuid.UUID
+}
+
+// Only after the seal is broken; un-hearting clears it.
+func (q *Queries) HeartNote(ctx context.Context, arg HeartNoteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, heartNote, arg.Heart, arg.ID, arg.RecipientID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const keepNote = `-- name: KeepNote :exec
@@ -262,7 +287,7 @@ func (q *Queries) MarkPurged(ctx context.Context, id uuid.UUID) error {
 }
 
 const notesFor = `-- name: NotesFor :many
-SELECT id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at FROM notes
+SELECT id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at, hearted_at FROM notes
 WHERE relationship_id = $1 AND deleted_at IS NULL
   AND (author_id = $2 OR (recipient_id = $2 AND state <> 'draft'))
 ORDER BY coalesce(delivered_at, deliver_at, created_at) DESC
@@ -298,6 +323,7 @@ func (q *Queries) NotesFor(ctx context.Context, arg NotesForParams) ([]Note, err
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.HeartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -433,7 +459,7 @@ func (q *Queries) SetPlanRemind(ctx context.Context, arg SetPlanRemindParams) er
 const updateNote = `-- name: UpdateNote :one
 UPDATE notes SET body = $3, state = $4, deliver_at = $5, deliver_tz = $6, updated_at = now()
 WHERE id = $1 AND relationship_id = $2 AND state <> 'delivered' AND deleted_at IS NULL
-RETURNING id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at
+RETURNING id, relationship_id, author_id, recipient_id, body, state, deliver_at, deliver_tz, delivered_at, opened_at, kept, created_at, updated_at, deleted_at, hearted_at
 `
 
 type UpdateNoteParams struct {
@@ -470,6 +496,7 @@ func (q *Queries) UpdateNote(ctx context.Context, arg UpdateNoteParams) (Note, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.HeartedAt,
 	)
 	return i, err
 }
