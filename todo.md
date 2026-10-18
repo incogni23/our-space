@@ -1,0 +1,194 @@
+# Between Us — build plan
+
+A little world for two. Your story, your way.
+
+Source of truth for design: the **Between Us · Product design** canvas
+(https://claude.ai/artifact/VKp72GNYrUgFZMY3fLnn55). Screen IDs below (A1, E4, G2…) refer to its artboards.
+Design tokens: `design/tokens.json`, `design/tokens.css` (v0.1, match canvas 4.1).
+
+## Non-negotiables (from the product definition)
+
+1. Exclusivity is enforced by the database and backend, never only the UI.
+2. Forming a space needs both people's consent. Leaving needs only one.
+3. A verified phone can belong to only one active relationship. A relationship has exactly two members.
+4. Logging out, reinstalling or changing devices never frees a relationship slot.
+5. A phone OTP proves control of a number, not consent, and never alone opens an existing space on a new device.
+6. Private content never becomes public without an explicit sharing action.
+7. Content featuring both partners needs both approvals before it is "approved by both". Either can withdraw before export.
+8. Originals are never altered by edits; exports are new assets.
+9. Revoking a link stops the link, not copies. Say so in the UI.
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| Frontend | Next.js (App Router) + TypeScript |
+| UI | Tailwind CSS mapped to `tokens.css` + accessible primitives (Radix) |
+| Backend | Go + Chi |
+| Database | PostgreSQL 16 |
+| DB access | pgx v5 + sqlc |
+| Migrations | goose (SQL files in `db/migrations`) |
+| Real-time | WebSockets (presence, pin updates, plan changes) |
+| Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) |
+| Media | S3-compatible object storage (MinIO locally) |
+| Calls | Managed WebRTC (later) |
+| Deploy | Managed containers |
+| CI/CD | GitHub Actions |
+
+## Repo layout
+
+```
+api/            Go service (cmd/api, internal/…)
+db/migrations/  goose SQL migrations
+db/queries/     sqlc query files
+web/            Next.js app
+design/         tokens.json, tokens.css
+todo.md
+```
+
+---
+
+## Phase 0 · Foundations
+
+- [x] Repo skeleton, README, `.gitignore`, `git init`
+- [x] `design/` tokens checked in
+- [x] Local Postgres for dev/tests (script that runs a throwaway cluster)
+- [ ] Go module, Chi router, config from env, health check, structured logging
+- [x] goose migrations + sqlc config wired to `db/`
+- [x] Next.js app with Tailwind theme generated from `tokens.css` (light + evening)
+- [x] Fonts: Newsreader, DM Sans, DM Mono
+- [ ] GitHub Actions: go vet/test (with Postgres service), web lint/typecheck/build
+
+## Phase 1 · Identity & exclusive pairing (weeks 1–2)
+
+Schema
+- [x] `users` (phone E.164 unique, phone_verified_at, display name, person tint, backup email)
+- [x] `phone_verifications` (provider ref, purpose, status, attempts, expires_at; never raw OTP)
+- [x] `relationships` (status pending|active|unlinked, name e.g. "Window Seat", unlinked_at, read_only_until)
+- [x] `relationship_members` + partial unique index: one open membership per user
+- [x] Trigger: max two open members per relationship
+- [x] `relationship_invitations` (token hash, inviter, expires_at 3 days, single use, state)
+- [x] Cooldown derived from last `left_at` of an active space (no extra table)
+- [x] `sessions` / devices (device-bound refresh tokens)
+
+Pairing service (one transaction, `SELECT … FOR UPDATE`)
+- [x] Create space (A4) → pending relationship + inviter membership
+- [x] Create invitation (A5) → token shown once, hash stored
+- [x] Accept (A7): lock invitation + both users; verify phones; check neither is paired, no cooldown; insert member; activate
+- [x] Concurrent accepts: only one wins; loser gets a clear error
+- [x] Inviter never learns *why* an invite failed (decline vs already paired look identical, canvas 5.2)
+- [x] Expired / reused link → friendly "this invite has run out"
+- [x] Tests for every row of the situation table (second pairing blocked, accept-while-paired rejected, logout keeps pairing…)
+
+Auth & verification
+- [x] OTP provider interface + dev provider; rate limits per phone (30s resend, 5/h) & IP (20/h); 10 min expiry; 5 attempts
+- [ ] Twilio Verify (or chosen provider) adapter
+- [x] New device + existing account → second factor required (backup email code or recovery code) — G5
+- [x] Recycled number path: "This number is new to me" → fresh account, old one stays locked — G5
+- [x] Change number API (G4): approve current + new number, swap atomically
+- [x] G4 screen · partner notice "updated their number"
+- [x] Recovery codes (8, HMAC-hashed), G5 screen
+- [ ] Backup email + email codes (G5 option 1) · manual review path ("I don't have either")
+- [x] Rate-limit wrong recovery-code attempts (5, then session revoked)
+
+Leaving (G1–G3)
+- [x] Unilateral leave: confirm with OTP, close membership(s), relationship → unlinked, read_only_until = +30 days
+- [x] Partner "space has closed" notice + neutral closed screen
+- [ ] DECIDE: "tell them tomorrow" (G2) — partner's app changes immediately, so a delay hides nothing today. Option hidden in UI until decided
+- [ ] Revoke all share links on leave
+- [x] Cooldown 7 days before a new space
+- [ ] Download-a-copy export job; "delete my copy now"
+- [x] Neutral, identical "space has closed" screen for both people
+
+Onboarding UI (A1–A8)
+- [x] A1 Welcome · A2 Your number · A3 Code · A4 Name the space · A5 Invite · A6 Waiting · A7 Accept (partner) · A8 Make it yours
+- [x] Settings (G1), Leave (G2), After leaving (G3), Day-one placeholder
+- [ ] A8 → H1 paywall hand-off (needs Phase 1b)
+
+## Phase 2 · The private space (weeks 3–4)  ← in progress
+
+- [x] Our Space home (B1): greeting, both clocks, "New from <partner>", bottom nav
+- [x] Time zone per person (detected on A4/A8)
+- [x] Boards & pins (C1–C3): save link/place/song/idea, first board auto-created, new board inline, visual/list views, filters, pin detail, status Saved/Planned/Done/Remembered, notes between you, remove + undo
+- [ ] Link previews (Open Graph unfurl worker, SSRF-safe) — cards are typographic until then
+- [ ] Awake hours (A8) + "both usually awake" overlap on B1
+- [ ] Plans (D1–D3): plan from a pin, time-zone aware times shown in both zones, RSVP, "Next together" + countdown on B1  ← next
+- [ ] Our Story timeline (E0): memories, trips, moments, "Made" filter
+- [ ] Media upload: presigned S3 uploads, resumable, location stripped, originals immutable; photo pins
+- [ ] Read-only access to an unlinked space until `read_only_until`
+- [ ] WebSocket hub: pin/plan updates (no presence outside Together, per 5.4)
+- [ ] Offline outbox ("Waiting to send", never claims sent)
+
+## Phase 3 · Notes & rituals (week 5)
+
+- [ ] Scheduled notes: recipient sees only who + when until open time; sender sees Scheduled → Delivered, never Opened
+- [ ] Durable job runner for reminders and note delivery
+- [ ] Push only for things with a time; quiet in-app banners otherwise
+
+## Phase 4 · Made by Us (week 6)
+
+Schema: `creative_projects`, `creative_assets`, `publication_approvals`, `share_links`, `export_jobs`
+- [ ] F1 format picker from any memory (Faceless / Soft launch / Photo dump / Reel)
+- [ ] E1–E3 collage: pick photos, layouts (grid, film strip, photo dump), sizes 4:5 / 9:16 / 1:1, edit
+- [ ] F2 Soft Launch Studio: reveal level (faceless / hint / full), templates, text/sticker/date
+- [ ] Browser canvas renderer → JPG export, EXIF/location stripped
+- [ ] E4 audience: keep private · ask partner then export · ask partner then share link · export just for me
+- [ ] E5 approvals: approve, suggest change, decline, withdraw; editing re-requests approval (approval bound to version hash)
+- [ ] F4 preview links: token hash, expiry (24h/7d/30d), revoke by either partner, no view tracking
+- [ ] F5 Our public side (shared name, bio ideas, look, profile picture) — changes need partner OK
+
+## Phase 5 · Polish & safety (week 7)
+
+- [ ] All states from canvas 5.2 (empty, error, sensitive)
+- [ ] Evening theme, reduced motion, 44px targets, contrast checks
+- [ ] Security pass: rate limits, authz on every relationship-scoped query, audit log, OWASP checks
+- [ ] Together prototype (shared playback)
+
+## Phase 6b · Subscription (do last, before beta) (canvas row H, handoff 5.5)
+
+Plans: 7 days $20 · 3 months $150 · 1 year $450 (USD). One subscription per space covers both; either can pay.
+Paywall comes after pairing (A8 → H1), so nobody pays before their partner says yes.
+
+Schema
+- [ ] `subscriptions` (relationship_id, payer_user_id, plan, status trialing|active|past_due|canceled|lapsed, current_period_end, cancel_at_period_end, provider ids)
+- [ ] `billing_events` (provider webhook log, idempotency key, raw payload hash)
+- [ ] At most one live subscription per relationship (partial unique index)
+
+Backend
+- [ ] Provider: **Dodo Payments** (merchant of record, handles tax). Adapter behind an interface
+- [ ] India: renewals debit ~48h after the renewal date (pre-debit window) — grant/extend access only on `payment.succeeded` / `subscription.renewed`, keep the space open meanwhile; $450/yr is above the ₹15,000 on-demand mandate so it uses a fixed-amount mandate (H2 copy must vary by plan)
+- [ ] Checkout session (H2, `POST /checkouts`) — card form rendered by Dodo, never touches our servers; space_id + payer_id in metadata
+- [ ] Webhooks: Standard Webhooks signature (`webhook-id/-timestamp/-signature`), dedupe on `webhook-id` in DB, events may arrive out of order → upsert by provider subscription id and re-fetch state
+- [ ] Map Dodo statuses (active, past_due, on_hold, cancelled, expired, failed) to our states (active, canceling, past_due, lapsed)
+- [ ] Entitlement check: active/past_due-grace → full access; lapsed/canceled-after-period → read-only, never deleted
+- [ ] Cancel at period end (H5), turn renewal back on, change plan at next renewal (H4), upgrade now with proration
+- [ ] "Who pays" handover to partner from next renewal
+- [ ] Renewal reminder 7 days before (both partners), receipts to payer email
+- [ ] Partner view (H6): "Covered by <name>" + end date only, never card or amount details
+- [ ] Payer leaves the space → stop auto-renew immediately (decide refund policy)
+
+UI
+- [ ] H1 choose plan · "Ask <partner> to choose" · H2 review & pay · H3 you're both covered
+- [ ] H4 Settings › Subscription · H5 cancel plainly · H6 partner's view
+- [ ] Read-only banner + restart for lapsed spaces
+
+## Phase 6 · Beta (week 8)
+
+- [ ] Deploy (managed containers + managed Postgres + S3)
+- [ ] Small couples beta, feedback loop
+
+## Later
+
+- [ ] F3 Reel Maker with server-side video rendering (MP4), licensed/user audio only
+- [ ] Native share sheet to Instagram where supported
+- [ ] Direct Instagram publishing (investigate Meta API first; don't promise)
+- [ ] Calls via managed WebRTC
+
+---
+
+## Open questions
+
+- OTP provider (Twilio Verify vs MessageBird vs Firebase) and target countries
+- Web-first only, or PWA install from day one?
+- Data retention after unlink: 30 days fixed, or configurable?
+- Recovery review (G5 "I don't have either"): who staffs it?

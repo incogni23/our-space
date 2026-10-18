@@ -1,0 +1,219 @@
+/* Between Us · design tokens v0.1
+   Names match the canvas (4.1 Tokens). Components use semantic roles only. */
+
+:root {
+  color-scheme: light;
+
+  /* Grounds and lines */
+  --bg-ground: #F7F2EA;
+  --bg-surface: #FFFCF7;
+  --bg-sunken: #EFE7DC;
+  --line-subtle: #E7DED2;      /* decorative hairlines */
+  --line-control: #9A8C80;     /* input borders, 3.2:1 on surface */
+
+  /* Text */
+  --text-primary: #44353E;     /* 10.3:1 on ground */
+  --text-secondary: #6F625A;   /* 5.3:1 on ground */
+  --text-inverse: #FFFCF7;
+
+  /* Actions */
+  --action-primary: #44353E;
+  --action-primary-hover: #382B33;
+  --action-primary-pressed: #2E2329;
+  --action-primary-text: #FFFCF7;
+  --action-destructive: #A3412F;
+  --action-destructive-hover: #8E3628;
+
+  /* The overlap: shared things, selected state. Never a person. */
+  --shared-tone: #C78382;
+  --shared-wash: #F3E3DF;
+  --shared-ink: #8E4D4F;       /* 5.1:1 on wash */
+
+  /* Status (always paired with an icon or word) */
+  --status-ok-wash: #E6EADF;
+  --status-ok-ink: #5B6851;
+  --status-time-wash: #F5E3D8;
+  --status-time-ink: #8A4E35;
+  --status-error: #A3412F;
+  --status-error-wash: #F6E0DA;
+
+  /* Personal tints, chosen per partner */
+  --person-terracotta-tone: #C98D72;
+  --person-terracotta-wash: #F5E3D8;
+  --person-terracotta-ink: #8A4E35;
+  --person-sage-tone: #9AA68F;
+  --person-sage-wash: #E6EADF;
+  --person-sage-ink: #5B6851;
+  --person-mauve-tone: #A99AAF;
+  --person-mauve-wash: #ECE6EE;
+  --person-mauve-ink: #6E5F75;
+
+  --focus-ring: #44353E;
+  --scrim: rgba(46, 35, 41, 0.45);
+
+  /* Type */
+  --font-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --text-display-xl: clamp(48px, 5vw, 64px);
+  --text-display: clamp(30px, 4vw, 44px);
+  --text-title-l: clamp(26px, 3vw, 32px);
+  --text-title: 22px;
+  --text-note: 17px;
+  --text-body-l: 17px;
+  --text-body: 15px;
+  --text-input: 16px;
+  --text-label: 13px;
+  --text-caption: 12px;
+  --text-stamp: 11px;
+  --tracking-display: -0.02em;
+  --tracking-stamp: 0.1em;
+  --leading-tight: 1.05;
+  --leading-body: 1.5;
+
+  /* Spacing, 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+  --space-18: 72px;
+  --space-24: 96px;
+
+  /* Radius encodes purpose */
+  --radius-print: 3px;
+  --radius-note: 4px;
+  --radius-control: 12px;
+  --radius-pin: 12px;
+  --radius-card: 14px;
+  --radius-ticket: 18px;
+  --radius-sheet: 22px;
+  --radius-pill: 999px;
+
+  /* Elevation and borders */
+  --shadow-paper: 0 1px 0 rgba(68, 53, 62, 0.05), 0 8px 24px -12px rgba(68, 53, 62, 0.3);
+  --shadow-lift: 0 2px 4px rgba(68, 53, 62, 0.06), 0 18px 40px -16px rgba(68, 53, 62, 0.45);
+  --shadow-sheet: 0 -12px 40px rgba(46, 35, 41, 0.25);
+  --ring-new: 0 0 0 2px var(--shared-tone), 0 0 0 6px var(--shared-wash);
+  --border-hairline: 1px solid var(--line-subtle);
+  --border-control: 1px solid var(--line-control);
+  --border-selected: 2px solid var(--text-primary);
+  --border-empty: 1.5px dashed var(--line-control);
+
+  /* Icons */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-stroke: 1.7;
+
+  /* Touch */
+  --target-min: 44px;
+
+  /* Motion */
+  --dur-quick: 120ms;
+  --dur-base: 220ms;
+  --dur-gentle: 420ms;
+  --dur-reveal: 700ms;
+  --dur-breathe: 1600ms;
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Layers */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-nav: 20;
+  --z-sheet: 40;
+  --z-dialog: 50;
+  --z-toast: 60;
+
+  /* Layout */
+  --content-max: 1120px;
+  --sidebar-w: 264px;
+  --gutter: 16px;
+}
+
+/* Breakpoints (use in media queries; CSS vars can't be used there)
+   xs 360 · sm 390 · md 744 · lg 1024 · xl 1280 · 2xl 1536 */
+@media (min-width: 744px) { :root { --gutter: 24px; } }
+@media (min-width: 1024px) { :root { --gutter: 48px; } }
+
+/* Evening */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg-ground: #231C21;
+    --bg-surface: #2F262C;
+    --bg-sunken: #1C161A;
+    --line-subtle: #43383F;
+    --line-control: #7A6D73;
+    --text-primary: #F3EBE1;
+    --text-secondary: #C2B5AB;
+    --text-inverse: #231C21;
+    --action-primary: #F3EBE1;
+    --action-primary-hover: #FFFFFF;
+    --action-primary-pressed: #E3D9CE;
+    --action-primary-text: #231C21;
+    --shared-tone: #DDA09D;
+    --shared-wash: #4A3237;
+    --shared-ink: #E8B4B1;
+    --status-ok-wash: #2F3A2C;
+    --status-ok-ink: #B9C6AC;
+    --status-time-wash: #4A3226;
+    --status-time-ink: #E6B79F;
+    --status-error: #F09A88;
+    --status-error-wash: #4A2620;
+    --action-destructive: #F09A88;
+    --action-destructive-hover: #F4B0A2;
+    --focus-ring: #DDA09D;
+    --shadow-paper: none;
+    --shadow-lift: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-ground: #231C21;
+  --bg-surface: #2F262C;
+  --bg-sunken: #1C161A;
+  --line-subtle: #43383F;
+  --line-control: #7A6D73;
+  --text-primary: #F3EBE1;
+  --text-secondary: #C2B5AB;
+  --text-inverse: #231C21;
+  --action-primary: #F3EBE1;
+  --action-primary-hover: #FFFFFF;
+  --action-primary-pressed: #E3D9CE;
+  --action-primary-text: #231C21;
+  --shared-tone: #DDA09D;
+  --shared-wash: #4A3237;
+  --shared-ink: #E8B4B1;
+  --status-ok-wash: #2F3A2C;
+  --status-ok-ink: #B9C6AC;
+  --status-time-wash: #4A3226;
+  --status-time-ink: #E6B79F;
+  --status-error: #F09A88;
+  --status-error-wash: #4A2620;
+  --action-destructive: #F09A88;
+  --action-destructive-hover: #F4B0A2;
+  --focus-ring: #DDA09D;
+  --shadow-paper: none;
+  --shadow-lift: none;
+}
+
+/* Base */
+html { background: var(--bg-ground); color: var(--text-primary); font-family: var(--font-sans); font-size: 100%; }
+body { margin: 0; font-size: var(--text-body); line-height: var(--leading-body); }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: var(--dur-quick) !important;
+    transition-property: opacity, background-color, color, border-color !important;
+  }
+}

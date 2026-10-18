@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@import "../../../design/tokens.css";
+
+/* Fonts come from next/font; the token stacks put them first. */
+:root {
+  --font-serif: var(--font-newsreader), 'Iowan Old Style', Georgia, serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+/* Tailwind names map to semantic tokens only. */
+@theme inline {
+  --color-ground: var(--bg-ground);
+  --color-surface: var(--bg-surface);
+  --color-sunken: var(--bg-sunken);
+  --color-line: var(--line-subtle);
+  --color-line-control: var(--line-control);
+  --color-ink: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-inverse: var(--text-inverse);
+  --color-action: var(--action-primary);
+  --color-action-hover: var(--action-primary-hover);
+  --color-action-pressed: var(--action-primary-pressed);
+  --color-action-text: var(--action-primary-text);
+  --color-danger: var(--action-destructive);
+  --color-danger-hover: var(--action-destructive-hover);
+  --color-shared: var(--shared-tone);
+  --color-shared-wash: var(--shared-wash);
+  --color-shared-ink: var(--shared-ink);
+  --color-ok-wash: var(--status-ok-wash);
+  --color-ok-ink: var(--status-ok-ink);
+  --color-time-wash: var(--status-time-wash);
+  --color-time-ink: var(--status-time-ink);
+  --color-error: var(--status-error);
+  --color-error-wash: var(--status-error-wash);
+  --color-terracotta: var(--person-terracotta-tone);
+  --color-terracotta-wash: var(--person-terracotta-wash);
+  --color-terracotta-ink: var(--person-terracotta-ink);
+  --color-sage: var(--person-sage-tone);
+  --color-sage-wash: var(--person-sage-wash);
+  --color-sage-ink: var(--person-sage-ink);
+  --color-mauve: var(--person-mauve-tone);
+  --color-mauve-wash: var(--person-mauve-wash);
+  --color-mauve-ink: var(--person-mauve-ink);
+
+  --font-display: var(--font-serif);
+  --font-body: var(--font-sans);
+  --font-stamp: var(--font-mono);
+}
+
+body {
+  font-family: var(--font-sans);
+}

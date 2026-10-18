@@ -1,0 +1,9 @@
+.devdb/
+.env
+.env.local
+node_modules/
+.next/
+web/out/
+/bin/
+*.log
+.DS_Store
