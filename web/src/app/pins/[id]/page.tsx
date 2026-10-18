@@ -8,6 +8,7 @@ import { KindIcon } from "@/components/pin-card";
 import { Avatar, ErrorText, Frames, Loading, Screen, cx } from "@/components/ui";
 import { ago, api, errorMessage, type Pin, type PinNote, type PinStatus } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 const STATUSES: Array<{ id: PinStatus; label: string }> = [
   { id: "saved", label: "Saved" },
@@ -21,6 +22,7 @@ export default function PinDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { ready, me, people, partner } = useSpace();
+  const tick = useLiveTick(["pin."], ready);
   const [pin, setPin] = useState<Pin | null>(null);
   const [notes, setNotes] = useState<PinNote[]>([]);
   const [reply, setReply] = useState("");
@@ -35,7 +37,7 @@ export default function PinDetail() {
         setNotes(r.notes);
       })
       .catch((e) => setError(errorMessage(e)));
-  }, [ready, id]);
+  }, [ready, id, tick]);
 
   async function setStatus(status: PinStatus) {
     if (!pin || pin.status === status) return;
@@ -116,6 +118,17 @@ export default function PinDetail() {
           <span className="text-xs font-medium text-muted">{mine ? "You" : by?.displayName}</span>
         </div>
       ) : null}
+
+      <Link
+        href={`/plans/new?pin=${pin.id}`}
+        className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+          <path d="M3.5 10h17M8 3v4M16 3v4" />
+        </svg>
+        Plan this
+      </Link>
 
       {pin.url ? (
         <a

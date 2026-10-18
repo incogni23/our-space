@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useLiveTick } from "./live";
 import { homeFor, partnerOf } from "./api";
 import { useMe } from "./use-me";
 
@@ -9,7 +10,11 @@ import { useMe } from "./use-me";
 export function useSpace() {
   const router = useRouter();
   const state = useMe();
-  const { me } = state;
+  const { me, reload } = state;
+  const spaceTick = useLiveTick(["space."], !!me?.space);
+  useEffect(() => {
+    if (spaceTick) void reload();
+  }, [spaceTick, reload]);
   useEffect(() => {
     if (me && me.space?.status !== "active") router.replace(homeFor(me));
   }, [me, router]);

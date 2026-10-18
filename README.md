@@ -47,6 +47,9 @@ web/                 Next.js app
 | `APP_ORIGIN` | `http://localhost:3000` | used in invite links |
 | `TRUST_PROXY` | `false` | read client IP from `X-Forwarded-For` |
 | `MIGRATE_ON_START` | `true` | |
+| `MEDIA_STORE` | `fs` | `fs` (local folder) or `s3` (MinIO, AWS S3, Cloudflare R2…) |
+| `MEDIA_DIR` | `.devdb/media` | for `fs` |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_USE_SSL` | — | for `s3`; endpoint is host[:port], e.g. `localhost:9000` for MinIO |
 
 ## Tests
 

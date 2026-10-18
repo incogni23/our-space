@@ -7,6 +7,7 @@ import { Avatar, Button, ButtonLink, Loading, Screen, Stamp } from "@/components
 import { formatDay, homeFor } from "@/lib/api";
 import { readLastInvite } from "@/lib/last-invite";
 import { useMe } from "@/lib/use-me";
+import { useLiveTick } from "@/lib/live";
 import { NoticeBanner } from "@/components/notice-banner";
 
 // A6 · Waiting for your person (and "The invite wasn't accepted", canvas 5.2)
@@ -26,9 +27,13 @@ export default function Waiting() {
     else if (!me.space) router.replace(homeFor(me));
   }, [me, router]);
 
-  // Pairing completes on the other phone; check back quietly.
+  // Pairing completes on the other phone: hear about it live, with a slow fallback.
+  const joinedTick = useLiveTick(["space."], !!me?.space);
   useEffect(() => {
-    const t = setInterval(() => void reload(), 8000);
+    if (joinedTick) void reload();
+  }, [joinedTick, reload]);
+  useEffect(() => {
+    const t = setInterval(() => void reload(), 30000);
     return () => clearInterval(t);
   }, [reload]);
 

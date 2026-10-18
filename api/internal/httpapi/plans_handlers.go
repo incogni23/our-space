@@ -121,6 +121,7 @@ func (s *Server) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sc.SpaceID, "plan.created", p.ID.String())
 	writeJSON(w, http.StatusCreated, map[string]any{"plan": toPlan(p, nil)})
 }
 
@@ -163,6 +164,7 @@ func (s *Server) handleRespondPlan(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sc.SpaceID, "plan.updated", p.ID.String())
 	writeJSON(w, http.StatusOK, map[string]any{"plan": toPlan(p, nil)})
 }
 
@@ -193,6 +195,7 @@ func (s *Server) handleUpdatePlan(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sc.SpaceID, "plan.updated", p.ID.String())
 	writeJSON(w, http.StatusOK, map[string]any{"plan": toPlan(p, nil)})
 }
 
@@ -213,5 +216,6 @@ func (s *Server) handleCancelPlan(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sc.SpaceID, "plan.cancelled", id.String())
 	w.WriteHeader(http.StatusNoContent)
 }

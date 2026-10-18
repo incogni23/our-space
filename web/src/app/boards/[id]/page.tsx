@@ -8,6 +8,7 @@ import { PinCard, statusStyle } from "@/components/pin-card";
 import { ErrorText, Loading, Screen, cx } from "@/components/ui";
 import { ago, api, errorMessage, type Board, type Pin } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 type Filter = "all" | "open" | "done";
 
@@ -17,6 +18,7 @@ function BoardPage() {
   const { id } = useParams<{ id: string }>();
   const saved = useSearchParams().get("saved");
   const { ready, people } = useSpace();
+  const tick = useLiveTick(["board.", "pin."], ready);
   const [board, setBoard] = useState<Board | null>(null);
   const [pins, setPins] = useState<Pin[]>([]);
   const [view, setView] = useState<"visual" | "list">("visual");
@@ -32,7 +34,7 @@ function BoardPage() {
         setPins(r.pins);
       })
       .catch((e) => setError(errorMessage(e)));
-  }, [ready, id]);
+  }, [ready, id, tick]);
 
   useEffect(() => {
     if (!toast) return;

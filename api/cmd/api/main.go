@@ -18,6 +18,7 @@ import (
 
 	"betweenus/api/internal/auth"
 	"betweenus/api/internal/httpapi"
+	"betweenus/api/internal/media"
 	"betweenus/api/internal/pairing"
 	"betweenus/db"
 )
@@ -78,11 +79,34 @@ func run(log *slog.Logger) error {
 	}
 	defer pool.Close()
 
+	var blobs media.Blobs
+	switch env("MEDIA_STORE", "fs") {
+	case "fs":
+		if prod {
+			log.Warn("MEDIA_STORE=fs in production: photos live on this machine's disk")
+		}
+		blobs = media.FSBlobs{Root: env("MEDIA_DIR", ".devdb/media")}
+	case "s3":
+		b, err := media.NewS3Blobs(media.S3Config{
+			Endpoint: os.Getenv("S3_ENDPOINT"), Region: os.Getenv("S3_REGION"), Bucket: os.Getenv("S3_BUCKET"),
+			AccessKey: os.Getenv("S3_ACCESS_KEY"), SecretKey: os.Getenv("S3_SECRET_KEY"), UseSSL: env("S3_USE_SSL", "true") == "true",
+		})
+		if err != nil {
+			return err
+		}
+		blobs = b
+	default:
+		return errors.New("unknown MEDIA_STORE")
+	}
+
 	srv := httpapi.New(httpapi.Config{
+		Blobs:        blobs,
 		AppOrigin:    env("APP_ORIGIN", "http://localhost:3000"),
 		CookieSecure: prod,
 		TrustProxy:   env("TRUST_PROXY", "false") == "true",
 	}, log, pool, auth.NewService(pool, provider, []byte(pepper)), pairing.NewService(pool))
+
+	srv.Start(ctx)
 
 	httpSrv := &http.Server{
 		Addr:              env("ADDR", ":8080"),

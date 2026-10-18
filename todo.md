@@ -28,7 +28,7 @@ Design tokens: `design/tokens.json`, `design/tokens.css` (v0.1, match canvas 4.1
 | Database | PostgreSQL 16 |
 | DB access | pgx v5 + sqlc |
 | Migrations | goose (SQL files in `db/migrations`) |
-| Real-time | WebSockets (presence, pin updates, plan changes) |
+| Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; WebSockets later for Together sessions |
 | Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) |
 | Media | S3-compatible object storage (MinIO locally) |
 | Calls | Managed WebRTC (later) |
@@ -112,11 +112,16 @@ Onboarding UI (A1–A8)
 - [x] Boards & pins (C1–C3): save link/place/song/idea, first board auto-created, new board inline, visual/list views, filters, pin detail, status Saved/Planned/Done/Remembered, notes between you, remove + undo
 - [ ] Link previews (Open Graph unfurl worker, SSRF-safe) — cards are typographic until then
 - [ ] Awake hours (A8) + "both usually awake" overlap on B1
-- [ ] Plans (D1–D3): plan from a pin, time-zone aware times shown in both zones, RSVP, "Next together" + countdown on B1  ← next
-- [ ] Our Story timeline (E0): memories, trips, moments, "Made" filter
-- [ ] Media upload: presigned S3 uploads, resumable, location stripped, originals immutable; photo pins
+- [x] Plans (D1–D3): plan from a pin (pin → planned), meet-up or call, both clocks with day labels, weekly repeat on the anchor zone's wall clock, DST notes, invite to confirm → accept / suggest another time / decline, edit, cancel, .ics export, month view, "Next together" on B1
+- [ ] Trips (partner's travel dates → "you're both in Bengaluru that day", countdown on B1)
+- [ ] Plan reminders (needs the job runner, Phase 3)
+- [x] Our Story timeline (E0): moments, trips, a change, where it started; year sections; filters; memory detail; add a memory with photos
+- [ ] "A year ago this weekend" card on B1 · "Made" filter (Phase 4)
+- [x] Photo upload: server re-encodes every photo (orientation applied, GPS and all metadata removed, display copy + thumbnail), served only to members via the API; local folder or any S3-compatible store (MinIO/S3/R2)
+- [ ] Photo pins on boards · resumable uploads · video
 - [ ] Read-only access to an unlinked space until `read_only_until`
-- [ ] WebSocket hub: pin/plan updates (no presence outside Together, per 5.4)
+- [x] Live updates: Server-Sent Events per space, fanned out through Postgres LISTEN/NOTIFY (multi-instance safe); boards, pins, notes, plans, memories, partner joined, space closed. Events carry what changed, never presence
+- [ ] WebSockets for Together sessions (Phase 5)
 - [ ] Offline outbox ("Waiting to send", never claims sent)
 
 ## Phase 3 · Notes & rituals (week 5)

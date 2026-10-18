@@ -6,10 +6,12 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Button, ButtonLink, ErrorText, Loading, Screen, Title } from "@/components/ui";
 import { api, errorMessage, type Board } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 // Boards index
 export default function Boards() {
   const { ready, people } = useSpace();
+  const tick = useLiveTick(["board.", "pin."], ready);
   const [boards, setBoards] = useState<Board[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -21,7 +23,7 @@ export default function Boards() {
     api<{ boards: Board[] }>("/boards")
       .then((r) => setBoards(r.boards))
       .catch((e) => setError(errorMessage(e)));
-  }, [ready]);
+  }, [ready, tick]);
 
   async function create(e: FormEvent) {
     e.preventDefault();

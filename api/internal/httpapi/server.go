@@ -20,9 +20,12 @@ import (
 
 	"betweenus/api/internal/auth"
 	"betweenus/api/internal/boards"
+	"betweenus/api/internal/live"
+	"betweenus/api/internal/media"
 	"betweenus/api/internal/pairing"
 	"betweenus/api/internal/plans"
 	"betweenus/api/internal/store"
+	"betweenus/api/internal/story"
 	"betweenus/api/internal/token"
 )
 
@@ -32,6 +35,8 @@ const (
 )
 
 type Config struct {
+	// Blobs stores photo bytes (local folder in development, S3-compatible otherwise).
+	Blobs media.Blobs
 	// AppOrigin is where the web app lives, used to build invite links.
 	AppOrigin    string
 	CookieSecure bool
@@ -47,11 +52,18 @@ type Server struct {
 	pairing *pairing.Service
 	boards  *boards.Service
 	plans   *plans.Service
+	media   *media.Service
+	story   *story.Service
+	live    *live.Hub
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
-	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool)}
+	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool),
+		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log)}
 }
+
+// Start runs background work (the live-event listener) until ctx ends.
+func (s *Server) Start(ctx context.Context) { go s.live.Run(ctx) }
 
 func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
@@ -83,6 +95,7 @@ func (s *Server) Routes() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.withSession(false))
 			r.Get("/me", s.handleMe)
+			r.Get("/live", s.handleLive)
 			r.Patch("/me", s.handleUpdateProfile)
 			r.Post("/me/recovery-codes", s.handleRecoveryCodes)
 			r.Post("/me/phone/start", s.handlePhoneStart)
@@ -115,6 +128,12 @@ func (s *Server) Routes() http.Handler {
 			r.Patch("/plans/{id}", s.handleUpdatePlan)
 			r.Post("/plans/{id}/respond", s.handleRespondPlan)
 			r.Post("/plans/{id}/cancel", s.handleCancelPlan)
+			r.Post("/media", s.handleUploadMedia)
+			r.Get("/media/{id}/{variant}", s.handleGetMedia)
+			r.Get("/memories", s.handleListMemories)
+			r.Post("/memories", s.handleCreateMemory)
+			r.Get("/memories/{id}", s.handleGetMemory)
+			r.Delete("/memories/{id}", s.handleDeleteMemory)
 		})
 	})
 	return r
@@ -128,6 +147,14 @@ func (s *Server) requireJSON(next http.Handler) http.Handler {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
 		default:
 			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+			if r.URL.Path == "/api/v1/media" && mt == "multipart/form-data" {
+				// Photo uploads: a custom header a cross-site form can't send.
+				if r.Header.Get("X-BU-Upload") != "1" {
+					writeError(w, http.StatusForbidden, "bad_upload", "Upload from the app.")
+					return
+				}
+				break
+			}
 			if mt != "application/json" {
 				writeError(w, http.StatusUnsupportedMediaType, "json_required", "Send JSON.")
 				return
@@ -312,6 +339,10 @@ func (s *Server) domainError(w http.ResponseWriter, r *http.Request, err error) 
 		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
 	case errors.Is(err, boards.ErrBoardRequired):
 		writeError(w, http.StatusBadRequest, "board_required", "Choose a board, or make a new one.")
+	case errors.Is(err, story.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That memory isn’t here any more.")
+	case errors.Is(err, story.ErrInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_input", "Check the title, date and photos.")
 	case errors.Is(err, plans.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "That plan isn’t here any more.")
 	case errors.Is(err, plans.ErrInvalid):
