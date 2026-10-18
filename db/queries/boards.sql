@@ -98,3 +98,7 @@ LIMIT 1;
 SELECT u.id, u.display_name, u.person_tint, u.time_zone
 FROM relationship_members rm JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 ORDER BY rm.joined_at;
+
+-- name: GetPinAny :one
+-- For background jobs only (already scoped by the job's own payload).
+SELECT * FROM pins WHERE id = $1 AND deleted_at IS NULL;

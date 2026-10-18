@@ -221,6 +221,35 @@ func (q *Queries) GetPin(ctx context.Context, arg GetPinParams) (GetPinRow, erro
 	return i, err
 }
 
+const getPinAny = `-- name: GetPinAny :one
+SELECT id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at, preview_status, preview_site, preview_description, preview_media_id FROM pins WHERE id = $1 AND deleted_at IS NULL
+`
+
+// For background jobs only (already scoped by the job's own payload).
+func (q *Queries) GetPinAny(ctx context.Context, id uuid.UUID) (Pin, error) {
+	row := q.db.QueryRow(ctx, getPinAny, id)
+	var i Pin
+	err := row.Scan(
+		&i.ID,
+		&i.RelationshipID,
+		&i.BoardID,
+		&i.CreatedBy,
+		&i.Kind,
+		&i.Title,
+		&i.Url,
+		&i.Note,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PreviewStatus,
+		&i.PreviewSite,
+		&i.PreviewDescription,
+		&i.PreviewMediaID,
+	)
+	return i, err
+}
+
 const listBoards = `-- name: ListBoards :many
 SELECT b.id, b.name, b.created_by, b.created_at,
        count(p.id) FILTER (WHERE p.id IS NOT NULL)::int AS pin_count,

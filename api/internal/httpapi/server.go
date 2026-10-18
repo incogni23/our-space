@@ -20,8 +20,10 @@ import (
 
 	"betweenus/api/internal/auth"
 	"betweenus/api/internal/boards"
+	"betweenus/api/internal/jobs"
 	"betweenus/api/internal/live"
 	"betweenus/api/internal/media"
+	"betweenus/api/internal/notes"
 	"betweenus/api/internal/pairing"
 	"betweenus/api/internal/plans"
 	"betweenus/api/internal/store"
@@ -57,18 +59,23 @@ type Server struct {
 	story   *story.Service
 	live    *live.Hub
 
-	unfurl     *unfurl.Client
-	previewSem chan struct{}
+	unfurl *unfurl.Client
+	notes  *notes.Service
+	jobs   *jobs.Runner
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
 	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool),
 		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log),
-		unfurl: unfurl.New(), previewSem: make(chan struct{}, 4)}
+		unfurl: unfurl.New(), notes: notes.NewService(pool), jobs: jobs.NewRunner(pool, log)}
 }
 
-// Start runs background work (the live-event listener) until ctx ends.
-func (s *Server) Start(ctx context.Context) { go s.live.Run(ctx) }
+// Start runs background work (live-event listener, job runner) until ctx ends.
+func (s *Server) Start(ctx context.Context) {
+	s.registerJobs()
+	go s.live.Run(ctx)
+	go s.jobs.Run(ctx)
+}
 
 func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
@@ -140,6 +147,12 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/memories/{id}", s.handleGetMemory)
 			r.Delete("/memories/{id}", s.handleDeleteMemory)
 			r.Get("/export", s.handleExport)
+			r.Get("/notes", s.handleListNotes)
+			r.Post("/notes", s.handleCreateNote)
+			r.Get("/notes/{id}", s.handleGetNote)
+			r.Patch("/notes/{id}", s.handleUpdateNote)
+			r.Delete("/notes/{id}", s.handleDeleteNote)
+			r.Post("/notes/{id}/keep", s.handleKeepNote)
 		})
 	})
 	return r
@@ -345,6 +358,18 @@ func (s *Server) domainError(w http.ResponseWriter, r *http.Request, err error) 
 		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
 	case errors.Is(err, boards.ErrBoardRequired):
 		writeError(w, http.StatusBadRequest, "board_required", "Choose a board, or make a new one.")
+	case errors.Is(err, notes.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That note isn’t here any more.")
+	case errors.Is(err, notes.ErrInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_input", "Check the note and when it opens.")
+	case errors.Is(err, notes.ErrInPast):
+		writeError(w, http.StatusBadRequest, "in_past", "That time has already passed.")
+	case errors.Is(err, notes.ErrNoPartner):
+		writeError(w, http.StatusConflict, "no_partner", "There’s nobody to write to yet.")
+	case errors.Is(err, notes.ErrDelivered):
+		writeError(w, http.StatusConflict, "already_delivered", "It’s already been delivered.")
+	case errors.Is(err, notes.ErrNotAuthor), errors.Is(err, notes.ErrNotForThem):
+		writeError(w, http.StatusForbidden, "not_allowed", "That isn’t yours to change.")
 	case errors.Is(err, story.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "That memory isn’t here any more.")
 	case errors.Is(err, story.ErrInvalid):

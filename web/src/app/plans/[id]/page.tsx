@@ -223,6 +223,22 @@ function PlanDetail() {
             </span>
           </div>
         ) : null}
+        {plan.remind !== "none" ? (
+          <div className="grid grid-cols-[24px_1fr] items-start gap-3 border-t border-sunken p-3.5">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+              <path d="M10 20a2 2 0 0 0 4 0" />
+            </svg>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">
+                {plan.remind === "evening_before"
+                  ? `Reminder · ${dayShort(new Date(new Date(next).getTime() - 86_400_000), tz)}, 8:00 pm`
+                  : `Reminder · ${timeOnly(new Date(new Date(next).getTime() - 3_600_000), tz)}`}
+              </span>
+              <span className="text-[13px] text-muted">For both of you, in your own time. Shown in the app.</span>
+            </span>
+          </div>
+        ) : null}
         {plan.notes ? <p className="m-0 border-t border-sunken p-3.5 text-sm leading-[1.5]">{plan.notes}</p> : null}
       </div>
 

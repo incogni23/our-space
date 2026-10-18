@@ -84,6 +84,10 @@ export default function Add() {
           </Link>
         </div>
 
+        <Link href="/notes/new" className="flex min-h-11 items-center gap-2 self-start text-sm font-medium text-ink">
+          Or write {partner?.displayName || "them"} a note →
+        </Link>
+
         <div className="flex flex-col gap-2">
           <label htmlFor="what" className="text-[13px] font-medium">
             Paste a link, or type anything

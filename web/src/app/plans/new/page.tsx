@@ -46,6 +46,7 @@ function NewPlan() {
   const [notes, setNotes] = useState("");
   const [weekly, setWeekly] = useState(false);
   const [ask, setAsk] = useState(true);
+  const [remind, setRemind] = useState<"none" | "evening_before" | "hour_before">("evening_before");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +88,7 @@ function NewPlan() {
           notes,
           pinId: pinId ?? undefined,
           askToConfirm: ask,
+          remind,
         },
       });
       router.replace(`/plans/${r.plan.id}?created=1`);
@@ -224,6 +226,21 @@ function NewPlan() {
           <Toggle id="asklbl" checked={ask} onChange={setAsk} label={`Invite ${pName} to confirm`} hint={`${partner?.displayName || "They"} can accept or suggest another time`} />
           <div className="border-t border-sunken">
             <Toggle id="weeklbl" checked={weekly} onChange={setWeekly} label="Every week" hint={weekly ? `Repeats at ${time} ${cityOf(tz)} time` : undefined} />
+          </div>
+          <div className="flex min-h-[52px] items-center justify-between gap-3 border-t border-sunken px-3.5">
+            <label htmlFor="premind" className="text-[15px] font-medium">
+              Remind us
+            </label>
+            <select
+              id="premind"
+              value={remind}
+              onChange={(e) => setRemind(e.target.value as typeof remind)}
+              className="min-h-10 rounded-[10px] border border-line bg-surface px-2 text-sm text-ink"
+            >
+              <option value="evening_before">The evening before</option>
+              <option value="hour_before">An hour before</option>
+              <option value="none">No reminder</option>
+            </select>
           </div>
           <div className="flex flex-col gap-2 border-t border-sunken px-3.5 py-3">
             <label htmlFor="pnotes" className="text-[13px] font-medium">

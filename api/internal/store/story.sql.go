@@ -130,7 +130,7 @@ func (q *Queries) AllPins(ctx context.Context, relationshipID uuid.UUID) ([]AllP
 }
 
 const allPlans = `-- name: AllPlans :many
-SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at FROM plans WHERE relationship_id = $1 ORDER BY starts_at
+SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind FROM plans WHERE relationship_id = $1 ORDER BY starts_at
 `
 
 func (q *Queries) AllPlans(ctx context.Context, relationshipID uuid.UUID) ([]Plan, error) {
@@ -161,6 +161,7 @@ func (q *Queries) AllPlans(ctx context.Context, relationshipID uuid.UUID) ([]Pla
 			&i.RespondedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Remind,
 		); err != nil {
 			return nil, err
 		}

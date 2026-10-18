@@ -8,7 +8,8 @@ import { NoticeBanner } from "@/components/notice-banner";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { PinCard } from "@/components/pin-card";
 import { Avatar, ButtonLink, Frames, Loading, Screen } from "@/components/ui";
-import { api, cityOf, homeFor, partnerOf, timeIn, type Pin, type Plan } from "@/lib/api";
+import { api, cityOf, homeFor, partnerOf, timeIn, type Note, type Pin, type Plan } from "@/lib/api";
+import { opensLabel } from "@/components/note-letter";
 import { fmt, theirTime, timeOnly } from "@/lib/time";
 import { useMe } from "@/lib/use-me";
 import { useLiveTick } from "@/lib/live";
@@ -30,6 +31,7 @@ export default function OurSpace() {
   const { me, loading, reload } = useMe();
   const [newPins, setNewPins] = useState<Pin[] | null>(null);
   const [nextPlan, setNextPlan] = useState<{ plan: Plan; at: string } | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [now, setNow] = useState(() => new Date());
 
   const readOnly = !!me && !me.space && !!me.readOnlySpace;
@@ -37,8 +39,8 @@ export default function OurSpace() {
     if (me && me.space?.status !== "active" && !readOnly) router.replace(homeFor(me));
   }, [me, router, readOnly]);
 
-  const tick = useLiveTick(["pin.", "plan."], me?.space?.status === "active");
-  const spaceTick = useLiveTick(["space."], !!me?.space);
+  const tick = useLiveTick(["pin.", "plan.", "note."], me?.space?.status === "active");
+  const spaceTick = useLiveTick(["space.", "notice.", "note."], !!me?.space);
   useEffect(() => {
     if (spaceTick) void reload();
   }, [spaceTick, reload]);
@@ -54,6 +56,9 @@ export default function OurSpace() {
           .sort((a, b) => a.at.localeCompare(b.at));
         setNextPlan(occ[0] ?? null);
       })
+      .catch(() => {});
+    api<{ notes: Note[] }>("/notes")
+      .then((r) => setNotes(r.notes))
       .catch(() => {});
   }, [me, tick]);
 
@@ -134,7 +139,7 @@ export default function OurSpace() {
         </Link>
       </header>
 
-      <NoticeBanner notices={me.notices} />
+      <NoticeBanner notices={me.notices} tz={me.user.timeZone} />
 
       <div className="flex flex-col gap-2">
         <span className="font-stamp text-[11px] uppercase tracking-[0.1em] text-muted">{today}</span>
@@ -199,6 +204,38 @@ export default function OurSpace() {
           </div>
         </article>
       ) : null}
+
+      {(() => {
+        const waiting = notes.filter((n) => n.state === "waiting").sort((a, b) => (a.deliverAt ?? "").localeCompare(b.deliverAt ?? ""));
+        const fresh = notes.filter((n) => !n.mine && n.state === "delivered" && n.opened === false);
+        return (
+          <Link href="/notes" className="flex items-center gap-3.5 rounded-(--radius-card) border border-line bg-surface px-4 py-3.5 text-ink no-underline">
+            <span className="relative h-11 w-14 flex-none" aria-hidden="true">
+              <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
+              <span className="absolute inset-x-0 top-0 h-6 bg-[#EBD3CE] [clip-path:polygon(0_0,100%_0,50%_100%)] dark:bg-[#5A3D43]" />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">
+                {fresh.length
+                  ? `A note from ${partner?.displayName || "them"} is here`
+                  : waiting.length
+                    ? `A note from ${partner?.displayName || "them"} is waiting`
+                    : "Notes"}
+              </span>
+              <span className="text-[13px] text-muted">
+                {fresh.length
+                  ? "Open it when you’re ready."
+                  : waiting.length
+                    ? `Opens ${opensLabel(waiting[0].deliverAt!, myTz)}`
+                    : `Write ${partner?.displayName || "them"} something to open later`}
+              </span>
+            </span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </Link>
+        );
+      })()}
 
       <section className="flex flex-col gap-3" aria-labelledby="newfrom">
         <div className="flex items-center justify-between">

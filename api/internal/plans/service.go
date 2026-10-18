@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"betweenus/api/internal/jobs"
 	"betweenus/api/internal/store"
 )
 
@@ -107,6 +108,56 @@ type NewPlan struct {
 	Notes        string
 	PinID        *uuid.UUID
 	AskToConfirm bool
+	Remind       string // none | evening_before | hour_before
+}
+
+const JobRemind = "plan.remind"
+
+var reminds = map[string]bool{"none": true, "evening_before": true, "hour_before": true}
+
+// remindAt: "evening_before" is 8 pm the day before, in that person's own zone.
+func remindAt(kind string, occ time.Time, tz string) time.Time {
+	if kind == "hour_before" {
+		return occ.Add(-time.Hour)
+	}
+	l := loc(tz)
+	d := occ.In(l)
+	return time.Date(d.Year(), d.Month(), d.Day()-1, 20, 0, 0, 0, l)
+}
+
+// ScheduleReminders replaces a plan's pending reminders with ones for its next
+// occurrence after `after`, one per person, in their own time.
+func ScheduleReminders(ctx context.Context, q *store.Queries, p store.Plan, after time.Time) error {
+	prefix := JobRemind + ":" + p.ID.String() + ":"
+	if err := jobs.Cancel(ctx, q, prefix); err != nil {
+		return err
+	}
+	if p.Remind == "none" || (p.Status != "proposed" && p.Status != "confirmed") {
+		return nil
+	}
+	occ := Occurrences(p, after, after.AddDate(1, 0, 0), 2)
+	members, err := q.MembersOf(ctx, p.RelationshipID)
+	if err != nil {
+		return err
+	}
+	for _, o := range occ {
+		scheduled := false
+		for _, m := range members {
+			at := remindAt(p.Remind, o, m.TimeZone)
+			if !at.After(after) {
+				continue
+			}
+			payload := map[string]string{"planId": p.ID.String(), "userId": m.ID.String(), "occurrence": o.UTC().Format(time.RFC3339)}
+			if err := jobs.Enqueue(ctx, q, JobRemind, payload, at, prefix+m.ID.String()); err != nil {
+				return err
+			}
+			scheduled = true
+		}
+		if scheduled {
+			return nil // next occurrence covered; later ones are scheduled as each fires
+		}
+	}
+	return nil
 }
 
 func (s *Service) Create(ctx context.Context, sc Scope, in NewPlan) (store.Plan, error) {
@@ -128,7 +179,10 @@ func (s *Service) Create(ctx context.Context, sc Scope, in NewPlan) (store.Plan,
 	if in.Repeat == "" {
 		in.Repeat = "none"
 	}
-	if (in.Kind != "plan" && in.Kind != "call") || (in.Repeat != "none" && in.Repeat != "weekly") {
+	if in.Remind == "" {
+		in.Remind = "none"
+	}
+	if (in.Kind != "plan" && in.Kind != "call") || (in.Repeat != "none" && in.Repeat != "weekly") || !reminds[in.Remind] {
 		return store.Plan{}, ErrInvalid
 	}
 	starts, err := parseLocal(in.Local, in.TimeZone)
@@ -161,7 +215,14 @@ func (s *Service) Create(ctx context.Context, sc Scope, in NewPlan) (store.Plan,
 			RelationshipID: sc.SpaceID, CreatedBy: sc.UserID, PinID: in.PinID, Kind: in.Kind, Title: title,
 			Place: place, Notes: notes, StartsAt: starts.UTC(), AnchorTz: in.TimeZone, Repeat: in.Repeat, Status: status,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		if err := q.SetPlanRemind(ctx, store.SetPlanRemindParams{ID: p.ID, RelationshipID: sc.SpaceID, Remind: in.Remind}); err != nil {
+			return err
+		}
+		p.Remind = in.Remind
+		return ScheduleReminders(ctx, q, p, s.Now())
 	})
 	return p, err
 }
@@ -204,6 +265,19 @@ func (s *Service) Get(ctx context.Context, sc Scope, id uuid.UUID) (View, error)
 func (s *Service) Respond(ctx context.Context, sc Scope, id uuid.UUID, action, local, tz string) (store.Plan, error) {
 	var out store.Plan
 	err := s.inTx(ctx, func(q *store.Queries) error {
+		var err error
+		if out, err = s.respond(ctx, q, sc, id, action, local, tz); err != nil {
+			return err
+		}
+		return ScheduleReminders(ctx, q, out, s.Now())
+	})
+	return out, err
+}
+
+// respond applies one answer and returns the updated plan.
+func (s *Service) respond(ctx context.Context, q *store.Queries, sc Scope, id uuid.UUID, action, local, tz string) (store.Plan, error) {
+	var out store.Plan
+	err := func() error {
 		p, err := q.GetPlanForUpdate(ctx, store.GetPlanForUpdateParams{ID: id, RelationshipID: sc.SpaceID})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
@@ -248,7 +322,7 @@ func (s *Service) Respond(ctx context.Context, sc Scope, id uuid.UUID, action, l
 			return err
 		}
 		return ErrInvalid
-	})
+	}()
 	return out, err
 }
 
@@ -259,6 +333,7 @@ type Edit struct {
 	Local    string
 	TimeZone string
 	Repeat   string
+	Remind   string
 }
 
 // Update edits a plan. Moving the time always goes back to the other person:
@@ -279,12 +354,34 @@ func (s *Service) Update(ctx context.Context, sc Scope, id uuid.UUID, in Edit) (
 	if in.Repeat != "none" && in.Repeat != "weekly" {
 		return store.Plan{}, ErrInvalid
 	}
+	if in.Remind != "" && !reminds[in.Remind] {
+		return store.Plan{}, ErrInvalid
+	}
 	starts, err := parseLocal(in.Local, in.TimeZone)
 	if err != nil {
 		return store.Plan{}, err
 	}
 	var out store.Plan
 	err = s.inTx(ctx, func(q *store.Queries) error {
+		var err error
+		if out, err = s.update(ctx, q, sc, id, in, title, place, notes, starts); err != nil {
+			return err
+		}
+		if in.Remind != "" && in.Remind != out.Remind {
+			if err := q.SetPlanRemind(ctx, store.SetPlanRemindParams{ID: id, RelationshipID: sc.SpaceID, Remind: in.Remind}); err != nil {
+				return err
+			}
+			out.Remind = in.Remind
+		}
+		return ScheduleReminders(ctx, q, out, s.Now())
+	})
+	return out, err
+}
+
+// update applies an edit and returns the updated plan.
+func (s *Service) update(ctx context.Context, q *store.Queries, sc Scope, id uuid.UUID, in Edit, title, place, notes string, starts time.Time) (store.Plan, error) {
+	var out store.Plan
+	err := func() error {
 		p, err := q.GetPlanForUpdate(ctx, store.GetPlanForUpdateParams{ID: id, RelationshipID: sc.SpaceID})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
@@ -323,16 +420,21 @@ func (s *Service) Update(ctx context.Context, sc Scope, id uuid.UUID, in Edit) (
 			StartsAt: starts.UTC(), AnchorTz: in.TimeZone, Repeat: in.Repeat, Status: status,
 		})
 		return err
-	})
+	}()
 	return out, err
 }
 
 func (s *Service) Cancel(ctx context.Context, sc Scope, id uuid.UUID) error {
-	n, err := store.New(s.pool).CancelPlan(ctx, store.CancelPlanParams{ID: id, RelationshipID: sc.SpaceID})
-	if err == nil && n == 0 {
-		return ErrNotFound
-	}
-	return err
+	return s.inTx(ctx, func(q *store.Queries) error {
+		n, err := q.CancelPlan(ctx, store.CancelPlanParams{ID: id, RelationshipID: sc.SpaceID})
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrNotFound
+		}
+		return jobs.Cancel(ctx, q, JobRemind+":"+id.String()+":")
+	})
 }
 
 func (s *Service) inTx(ctx context.Context, fn func(q *store.Queries) error) error {

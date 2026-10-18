@@ -52,6 +52,7 @@ export type Plan = {
   startsAt: string;
   anchorTz: string;
   repeat: "none" | "weekly";
+  remind: "none" | "evening_before" | "hour_before";
   status: PlanStatus;
   suggestedStartsAt?: string;
   suggestedBy?: string;
@@ -78,7 +79,22 @@ export type Notice =
       createdAt: string;
       payload: { spaceName: string; leftByName: string; leftAt: string; readOnlyUntil: string };
     }
-  | { id: string; kind: "partner_number_updated"; createdAt: string; payload: { name: string } };
+  | { id: string; kind: "partner_number_updated"; createdAt: string; payload: { name: string } }
+  | { id: string; kind: "note_delivered"; createdAt: string; payload: { noteId: string; fromName: string } }
+  | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } };
+
+export type Note = {
+  id: string;
+  mine: boolean;
+  state: "draft" | "scheduled" | "waiting" | "delivered";
+  body?: string;
+  deliverAt?: string;
+  deliverTz?: string;
+  deliveredAt?: string;
+  opened?: boolean;
+  kept?: boolean;
+  createdAt: string;
+};
 
 export type ReadOnlySpace = { id: string; name: string; until: string; members: Member[] };
 

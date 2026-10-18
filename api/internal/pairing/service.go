@@ -17,9 +17,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"betweenus/api/internal/jobs"
 	"betweenus/api/internal/store"
 	"betweenus/api/internal/token"
 )
+
+// JobPurge deletes a closed space's content once its read-only window ends.
+const JobPurge = "space.purge"
 
 const (
 	DefaultInviteTTL   = 72 * time.Hour
@@ -354,6 +358,10 @@ func (s *Service) Leave(ctx context.Context, userID uuid.UUID) (store.Relationsh
 		}
 		if rel.Status == "active" {
 			if err := s.noticeSpaceClosed(ctx, q, rel, userID, now, *readOnlyUntil); err != nil {
+				return err
+			}
+			// Content is deleted when the read-only window ends.
+			if err := jobs.Enqueue(ctx, q, JobPurge, map[string]string{"relationshipId": rel.ID.String()}, *readOnlyUntil, JobPurge+":"+rel.ID.String()); err != nil {
 				return err
 			}
 		}
