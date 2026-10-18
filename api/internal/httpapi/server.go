@@ -27,6 +27,7 @@ import (
 	"betweenus/api/internal/notes"
 	"betweenus/api/internal/pairing"
 	"betweenus/api/internal/plans"
+	"betweenus/api/internal/push"
 	"betweenus/api/internal/store"
 	"betweenus/api/internal/story"
 	"betweenus/api/internal/token"
@@ -41,6 +42,8 @@ const (
 type Config struct {
 	// Blobs stores photo bytes (local folder in development, S3-compatible otherwise).
 	Blobs media.Blobs
+	// Push sends Web Push notifications; nil or keyless disables them.
+	Push *push.Service
 	// AppOrigin is where the web app lives, used to build invite links.
 	AppOrigin    string
 	CookieSecure bool
@@ -85,7 +88,10 @@ func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
+	r.Use(securityHeaders)
+	r.Use(s.rateLimit)
 	r.Use(s.requireJSON)
+	r.Use(s.idempotency)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := s.pool.Ping(r.Context()); err != nil {
@@ -114,6 +120,9 @@ func (s *Server) Routes() http.Handler {
 			r.Use(s.withSession(false))
 			r.Get("/me", s.handleMe)
 			r.Get("/live", s.handleLive)
+			r.Get("/push/key", s.handlePushKey)
+			r.Post("/push/subscribe", s.handlePushSubscribe)
+			r.Post("/push/unsubscribe", s.handlePushUnsubscribe)
 			r.Patch("/me", s.handleUpdateProfile)
 			r.Post("/me/recovery-codes", s.handleRecoveryCodes)
 			r.Post("/me/phone/start", s.handlePhoneStart)

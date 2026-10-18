@@ -9,6 +9,7 @@ import { Avatar, ErrorText, Frames, Loading, Screen, cx } from "@/components/ui"
 import { ago, api, errorMessage, photoUrl, type Pin, type PinNote, type PinStatus } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
 import { useLiveTick } from "@/lib/live";
+import { sendOrQueue } from "@/lib/outbox";
 
 const STATUSES: Array<{ id: PinStatus; label: string }> = [
   { id: "saved", label: "Saved" },
@@ -57,8 +58,8 @@ export default function PinDetail() {
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ note: PinNote }>(`/pins/${pin.id}/notes`, { body: { body: reply } });
-      setNotes((n) => [...n, r.note]);
+      const r = await sendOrQueue<{ note: PinNote }>(`/pins/${pin.id}/notes`, { body: reply }, reply.slice(0, 60));
+      if (r) setNotes((n) => [...n, r.note]);
       setReply("");
     } catch (err) {
       setError(errorMessage(err));

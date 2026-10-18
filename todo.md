@@ -150,12 +150,18 @@ Schema: `creations` (spec + rendered image as its own media row, version), `crea
 - [ ] F5 Our public side (shared name, bio ideas, look, profile picture) — changes need partner OK
 - [ ] F3 Reel Maker (server-side video rendering) — Later
 
-## Phase 5 · Polish & safety (week 7)  ← next
+## Phase 5 · Polish & safety (week 7)  ← in progress
 
-- [ ] All states from canvas 5.2 (empty, error, sensitive)
-- [ ] Evening theme, reduced motion, 44px targets, contrast checks
-- [ ] Security pass: rate limits, authz on every relationship-scoped query, audit log, OWASP checks
-- [ ] Together prototype (shared playback)
+- [x] Security headers: CSP, frame-ancestors none, nosniff, referrer and permissions policy, HSTS in production; strict CSP on API responses
+- [x] Per-session/IP rate limits on the whole API (reads 600/min, writes 120/min; OTP limits stay in Postgres)
+- [x] Idempotency-Key replay for retried POSTs (no duplicate pins/notes after a dropped connection)
+- [x] Installable PWA: manifest, icons (emblem), service worker; pages and your data readable offline from the last copy; cleared on sign-out
+- [x] Offline outbox: pins, pin notes and notes saved offline wait ("N waiting to send") and send when back; never shown as sent early
+- [x] Web Push for things with a time: note opening ("A note is here for you", lock-screen safe) and plan reminders; endpoints restricted to known push services; VAPID keys from env (dev keys kept in .devdb)
+- [ ] Remaining 5.2 states sweep (Made by Us rendering states, notification banner timing)
+- [ ] Evening theme + accessibility audit (contrast in dark, focus order, 200% zoom, reduced motion)
+- [ ] Authorization review across every endpoint + audit log of sensitive actions (leave, number change, recovery)
+- [ ] Together prototype (shared playback; WebSockets)
 
 ## Phase 6b · Subscription (do last, before beta) (canvas row H, handoff 5.5)
 

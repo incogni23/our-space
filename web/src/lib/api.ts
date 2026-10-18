@@ -126,11 +126,14 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: string; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
   const hasBody = init.body !== undefined;
+  const headers: Record<string, string> = {};
+  if (hasBody) headers["Content-Type"] = "application/json";
+  if (init.idempotencyKey) headers["Idempotency-Key"] = init.idempotencyKey;
   const res = await fetch(`/api/v1${path}`, {
     method: init.method ?? (hasBody ? "POST" : "GET"),
-    headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+    headers,
     body: hasBody ? JSON.stringify(init.body) : undefined,
     credentials: "same-origin",
     cache: "no-store",

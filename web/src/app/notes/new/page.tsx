@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { NoteForm, toPayload, type NoteDraft } from "@/components/note-form";
 import { Loading, Screen, TopBar } from "@/components/ui";
-import { api, errorMessage, type Note } from "@/lib/api";
+import { errorMessage, type Note } from "@/lib/api";
 import { dayKey } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
+import { sendOrQueue } from "@/lib/outbox";
 
 // Write a note
 export default function NewNote() {
@@ -23,8 +24,8 @@ export default function NewNote() {
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ note: Note }>("/notes", { body: toPayload(d, myTz, partner?.timeZone ?? myTz) });
-      router.replace(`/notes/${r.note.id}?saved=1`);
+      const r = await sendOrQueue<{ note: Note }>("/notes", toPayload(d, myTz, partner?.timeZone ?? myTz), "A note");
+      router.replace(r ? `/notes/${r.note.id}?saved=1` : "/notes");
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
