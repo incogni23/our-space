@@ -69,7 +69,7 @@ export default function Story() {
 
       {readOnly ? <ReadOnlyBanner name={spaceName} until={me?.readOnlySpace?.until} /> : null}
 
-      <div className="flex gap-1.5" role="radiogroup" aria-label="Filter">
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Filter">
         {([
           ["all", "All"],
           ["trip", "Trips"],
@@ -89,6 +89,9 @@ export default function Story() {
             {label}
           </button>
         ))}
+        <Link href="/made" className="flex min-h-[38px] items-center rounded-[10px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink no-underline">
+          Made
+        </Link>
       </div>
 
       <ErrorText>{error}</ErrorText>

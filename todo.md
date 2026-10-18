@@ -136,19 +136,21 @@ Onboarding UI (A1–A8)
 - [ ] Web Push for things with a time (notes opening, reminders) — needs the PWA/service worker (Phase 5)
 - [ ] Email receipts/notifications (provider TBD)
 
-## Phase 4 · Made by Us (week 6)
+## Phase 4 · Made by Us (week 6)  ✓ done (except F5)
 
-Schema: `creative_projects`, `creative_assets`, `publication_approvals`, `share_links`, `export_jobs`
-- [ ] F1 format picker from any memory (Faceless / Soft launch / Photo dump / Reel)
-- [ ] E1–E3 collage: pick photos, layouts (grid, film strip, photo dump), sizes 4:5 / 9:16 / 1:1, edit
-- [ ] F2 Soft Launch Studio: reveal level (faceless / hint / full), templates, text/sticker/date
-- [ ] Browser canvas renderer → JPG export, EXIF/location stripped
-- [ ] E4 audience: keep private · ask partner then export · ask partner then share link · export just for me
-- [ ] E5 approvals: approve, suggest change, decline, withdraw; editing re-requests approval (approval bound to version hash)
-- [ ] F4 preview links: token hash, expiry (24h/7d/30d), revoke by either partner, no view tracking
+Schema: `creations` (spec + rendered image as its own media row, version), `creation_approvals` (bound to version), `share_links`
+- [x] F1 format picker from any memory with photos (Faceless · Soft launch · Photo dump · Collage; Reel shown as later)
+- [x] E1 pick photos in order · E2 layout (clean grid, film strip, photo dump) and size (4:5, 9:16, 1:1) · E3 caption, caption style, background, spacing
+- [x] F2 Soft launch on your own photo: faceless (tight crop around a point you tap) · hint (initials sticker + date stamp) · full reveal
+- [x] One browser renderer for preview and export (WYSIWYG); export is a new image, originals untouched; server re-encodes, no metadata
+- [x] E4 who sees it: keep it between us · ask partner then export · ask partner then share a link · export just for me (never "approved")
+- [x] E5 approvals: approve · suggest a change (comment) · not this one · withdraw; any edit is a new version and asks again
+- [x] F4 preview links: token hash, 24h/7d/30d, either can turn off, bound to the approved version, stop when the space closes; public page shows only the image, no-index, no-referrer, no tracking
+- [x] Purge covers creations, approvals and links
 - [ ] F5 Our public side (shared name, bio ideas, look, profile picture) — changes need partner OK
+- [ ] F3 Reel Maker (server-side video rendering) — Later
 
-## Phase 5 · Polish & safety (week 7)
+## Phase 5 · Polish & safety (week 7)  ← next
 
 - [ ] All states from canvas 5.2 (empty, error, sensitive)
 - [ ] Evening theme, reduced motion, 44px targets, contrast checks

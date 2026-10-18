@@ -250,3 +250,32 @@ export async function uploadPhoto(file: File): Promise<Photo> {
   }
   return data.photo as Photo;
 }
+
+export type CreationStatus = "draft" | "private" | "solo" | "awaiting" | "change_requested" | "declined" | "approved";
+
+export type Creation = {
+  id: string;
+  createdBy: string;
+  memoryId?: string;
+  format: "collage" | "softlaunch";
+  spec: import("./render").Spec;
+  version: number;
+  renderMediaId?: string;
+  audience: "private" | "solo" | "ask_export" | "ask_link";
+  status: CreationStatus;
+  decisions: Array<{ userId: string; decision: "approved" | "change" | "declined" | "withdrawn"; comment?: string; at: string }>;
+  links?: Array<{ id: string; version: number; expiresAt: string; revokedAt?: string; createdBy: string; createdAt: string }>;
+  updatedAt: string;
+};
+
+export async function uploadRender(creationId: string, blob: Blob): Promise<Creation> {
+  const body = new FormData();
+  body.append("file", blob, "render.jpg");
+  const res = await fetch(`/api/v1/creations/${creationId}/render`, { method: "POST", body, headers: { "X-BU-Upload": "1" }, credentials: "same-origin" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const e = data?.error ?? {};
+    throw new ApiError(res.status, e.code ?? "unknown", e.message ?? "That didn’t save. Try again.");
+  }
+  return data.creation as Creation;
+}

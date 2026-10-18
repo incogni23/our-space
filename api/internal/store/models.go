@@ -20,6 +20,32 @@ type Board struct {
 	ArchivedAt     *time.Time
 }
 
+type Creation struct {
+	ID             uuid.UUID
+	RelationshipID uuid.UUID
+	CreatedBy      uuid.UUID
+	MemoryID       *uuid.UUID
+	Format         string
+	Spec           []byte
+	Version        int32
+	RenderMediaID  *uuid.UUID
+	RenderHash     *string
+	Audience       string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      *time.Time
+}
+
+type CreationApproval struct {
+	ID         int64
+	CreationID uuid.UUID
+	UserID     uuid.UUID
+	Version    int32
+	Decision   string
+	Comment    string
+	CreatedAt  time.Time
+}
+
 type Job struct {
 	ID          int64
 	Kind        string
@@ -203,6 +229,19 @@ type Session struct {
 	ExpiresAt            time.Time
 	DeviceHash           []byte
 	SecondFactorAttempts int32
+}
+
+type ShareLink struct {
+	ID             uuid.UUID
+	CreationID     uuid.UUID
+	RelationshipID uuid.UUID
+	Version        int32
+	TokenHash      []byte
+	CreatedBy      uuid.UUID
+	ExpiresAt      time.Time
+	RevokedAt      *time.Time
+	RevokedBy      *uuid.UUID
+	CreatedAt      time.Time
 }
 
 type User struct {
