@@ -18,6 +18,7 @@ import (
 	"betweenus/api/internal/notes"
 	"betweenus/api/internal/pairing"
 	"betweenus/api/internal/plans"
+	"betweenus/api/internal/push"
 	"betweenus/api/internal/store"
 )
 
@@ -70,6 +71,8 @@ func (s *Server) jobDeliverNote(ctx context.Context, payload []byte) error {
 		return err
 	}
 	s.live.Publish(ctx, live.Event{Space: n.RelationshipID, Type: "note.delivered", ID: n.ID.String(), Actor: n.AuthorID.String()})
+	// Lock-screen safe: no sender name, no words from the note.
+	s.cfg.Push.Send(ctx, n.RecipientID, push.Message{Title: "Between Us", Body: "A note is here for you.", URL: "/notes/" + n.ID.String(), Tag: "note-" + n.ID.String()[:8]})
 	return nil
 }
 
@@ -105,6 +108,14 @@ func (s *Server) jobRemindPlan(ctx context.Context, payload []byte) error {
 			return err
 		}
 		s.live.Publish(ctx, live.Event{Space: p.RelationshipID, Type: "notice.created", ID: p.ID.String(), Actor: userID.String()})
+		if u, err := q.GetUser(ctx, userID); err == nil {
+			loc, lerr := time.LoadLocation(u.TimeZone)
+			if lerr != nil {
+				loc = time.UTC
+			}
+			when := occ.In(loc).Format("Mon 2 Jan, 3:04 pm")
+			s.cfg.Push.Send(ctx, userID, push.Message{Title: p.Title, Body: when, URL: "/plans/" + p.ID.String(), Tag: "plan-" + p.ID.String()[:8]})
+		}
 	}
 	if p.Repeat == "weekly" {
 		return plans.ScheduleReminders(ctx, q, p, occ.Add(time.Minute))
@@ -130,7 +141,7 @@ func (s *Server) jobPurgeSpace(ctx context.Context, payload []byte) error {
 		return err
 	}
 	steps := []func(context.Context, uuid.UUID) error{
-		q.PurgeShareLinks, q.PurgeCreationApprovals, q.PurgeCreations,
+		q.PurgeShareLinks, q.PurgeCreationApprovals, q.PurgeCreations, q.PurgePlanEvents, q.PurgeTogether,
 		q.PurgeNotes, q.PurgePinNotes, q.PurgeMemoryMedia, q.PurgePlans, q.PurgeMemories, q.PurgePins, q.PurgeBoards,
 	}
 	for _, step := range steps {

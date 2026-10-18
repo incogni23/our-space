@@ -35,7 +35,7 @@ export function NoteLetter({
     return (
       <Link href={href} aria-label={`A note from ${partnerName}, opens ${opensLabel(note.deliverAt!, myTz)}`} className="relative block h-[120px] text-ink no-underline">
         <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
-        <span className="absolute inset-x-0 top-0 h-16 bg-[#EBD3CE] [clip-path:polygon(0_0,100%_0,50%_100%)] dark:bg-[#5A3D43]" />
+        <span className="absolute inset-x-0 top-0 h-16 bg-shared-flap [clip-path:polygon(0_0,100%_0,50%_100%)]" />
         <span className="absolute inset-x-0 bottom-3 flex flex-col items-center gap-0.5">
           <span className="text-xs font-medium text-shared-ink">From {partnerName}</span>
           <span className="font-stamp text-[10px] uppercase tracking-[0.08em] text-shared-ink">Opens {opensLabel(note.deliverAt!, myTz)}</span>
@@ -71,7 +71,11 @@ export function NoteLetter({
       <span className={cx("relative flex min-h-[112px] flex-col justify-between gap-2 rounded-(--radius-note) bg-surface p-3 shadow-(--shadow-paper)", fresh && "shadow-(--ring-new)")}>
         <span className="line-clamp-3 font-display text-[15px] italic leading-[1.35]">{note.body}</span>
         <span className="font-stamp text-[10px] uppercase tracking-[0.08em] text-muted">
-          {note.mine ? `Delivered ${dayShort(note.deliveredAt!, myTz)}` : `From ${partnerName} · ${dayShort(note.deliveredAt!, myTz)}`}
+          {note.mine
+            ? note.readAt
+              ? `Read ${dayShort(note.readAt, myTz)}, ${timeOnly(note.readAt, myTz)}`
+              : `Delivered ${dayShort(note.deliveredAt!, myTz)} · not read yet`
+            : `From ${partnerName} · ${dayShort(note.deliveredAt!, myTz)}`}
           {note.kept ? " · kept" : ""}
         </span>
       </span>

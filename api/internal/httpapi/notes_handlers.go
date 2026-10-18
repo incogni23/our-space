@@ -17,6 +17,7 @@ type noteJSON struct {
 	DeliverAt   *time.Time `json:"deliverAt,omitempty"`
 	DeliverTz   *string    `json:"deliverTz,omitempty"`
 	DeliveredAt *time.Time `json:"deliveredAt,omitempty"`
+	ReadAt      *time.Time `json:"readAt,omitempty"`
 	Opened      *bool      `json:"opened,omitempty"`
 	Kept        *bool      `json:"kept,omitempty"`
 	CreatedAt   time.Time  `json:"createdAt"`
@@ -25,7 +26,7 @@ type noteJSON struct {
 func toNote(v notes.View) noteJSON {
 	return noteJSON{
 		ID: v.ID.String(), Mine: v.Mine, State: v.State, Body: v.Body, DeliverAt: v.DeliverAt, DeliverTz: v.DeliverTz,
-		DeliveredAt: v.DeliveredAt, Opened: v.Opened, Kept: v.Kept, CreatedAt: v.CreatedAt,
+		DeliveredAt: v.DeliveredAt, ReadAt: v.ReadAt, Opened: v.Opened, Kept: v.Kept, CreatedAt: v.CreatedAt,
 	}
 }
 
@@ -92,10 +93,13 @@ func (s *Server) handleGetNote(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	v, err := s.notes.Get(r.Context(), sc, id)
+	v, firstRead, err := s.notes.Get(r.Context(), sc, id)
 	if err != nil {
 		s.domainError(w, r, err)
 		return
+	}
+	if firstRead {
+		s.publish(r, sc.SpaceID, "note.read", id.String())
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"note": toNote(v)})
 }

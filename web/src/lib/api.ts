@@ -59,6 +59,7 @@ export type Plan = {
   respondedBy?: string;
   createdAt: string;
   occurrences?: string[];
+  events?: Array<{ userId: string; action: "created" | "accepted" | "declined" | "suggested" | "moved" | "edited" | "cancelled"; at?: string; when: string }>;
 };
 
 export type PinNote = { id: string; authorId: string; body: string; createdAt: string };
@@ -81,7 +82,23 @@ export type Notice =
     }
   | { id: string; kind: "partner_number_updated"; createdAt: string; payload: { name: string } }
   | { id: string; kind: "note_delivered"; createdAt: string; payload: { noteId: string; fromName: string } }
-  | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } };
+  | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } }
+  | { id: string; kind: "plan_answer"; createdAt: string; payload: { planId: string; title: string; answer: "accepted" | "declined" | "suggested"; name: string; at: string } }
+  | { id: string; kind: "together_invite"; createdAt: string; payload: { sessionId: string; title: string; name: string } };
+
+export type TogetherSession = {
+  id: string;
+  startedBy: string;
+  title: string;
+  url?: string;
+  status: "waiting" | "playing" | "paused" | "ended";
+  positionMs: number;
+  positionAt: string;
+  pausedReason?: "someone" | "connection";
+  updatedBy?: string;
+  endedAt?: string;
+  serverNow: string;
+};
 
 export type Note = {
   id: string;
@@ -91,6 +108,8 @@ export type Note = {
   deliverAt?: string;
   deliverTz?: string;
   deliveredAt?: string;
+  /** Writer only: when it was first read. */
+  readAt?: string;
   opened?: boolean;
   kept?: boolean;
   createdAt: string;
@@ -126,11 +145,14 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: string; body?: unknown; idempotencyKey?: string } = {}): Promise<T> {
   const hasBody = init.body !== undefined;
+  const headers: Record<string, string> = {};
+  if (hasBody) headers["Content-Type"] = "application/json";
+  if (init.idempotencyKey) headers["Idempotency-Key"] = init.idempotencyKey;
   const res = await fetch(`/api/v1${path}`, {
     method: init.method ?? (hasBody ? "POST" : "GET"),
-    headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+    headers,
     body: hasBody ? JSON.stringify(init.body) : undefined,
     credentials: "same-origin",
     cache: "no-store",

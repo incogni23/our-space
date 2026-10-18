@@ -4,11 +4,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	"betweenus/api/internal/httpapi"
 	"betweenus/api/internal/media"
 	"betweenus/api/internal/pairing"
+	"betweenus/api/internal/push"
 	"betweenus/db"
 )
 
@@ -99,8 +102,14 @@ func run(log *slog.Logger) error {
 		return errors.New("unknown MEDIA_STORE")
 	}
 
+	pushSvc, err := pushService(pool, log, prod)
+	if err != nil {
+		return err
+	}
+
 	srv := httpapi.New(httpapi.Config{
 		Blobs:        blobs,
+		Push:         pushSvc,
 		AppOrigin:    env("APP_ORIGIN", "http://localhost:3000"),
 		CookieSecure: prod,
 		TrustProxy:   env("TRUST_PROXY", "false") == "true",
@@ -126,6 +135,35 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	return nil
+}
+
+// pushService reads VAPID keys from the environment. In development, keys are
+// generated once and kept in .devdb so browser subscriptions survive restarts.
+func pushService(pool *pgxpool.Pool, log *slog.Logger, prod bool) (*push.Service, error) {
+	pub, priv := os.Getenv("VAPID_PUBLIC_KEY"), os.Getenv("VAPID_PRIVATE_KEY")
+	subject := env("VAPID_SUBJECT", "mailto:dev@example.com")
+	if pub == "" || priv == "" {
+		if prod {
+			log.Warn("VAPID keys not set: notifications are off")
+			return push.NewService(pool, log, "", "", subject), nil
+		}
+		path := filepath.Join(env("MEDIA_DIR", ".devdb/media"), "..", "vapid.json")
+		var keys struct{ Public, Private string }
+		if b, err := os.ReadFile(path); err == nil && json.Unmarshal(b, &keys) == nil && keys.Public != "" {
+			pub, priv = keys.Public, keys.Private
+		} else {
+			var err error
+			if pub, priv, err = push.GenerateKeys(); err != nil {
+				return nil, err
+			}
+			b, _ := json.Marshal(struct{ Public, Private string }{pub, priv})
+			_ = os.MkdirAll(filepath.Dir(path), 0o700)
+			if err := os.WriteFile(path, b, 0o600); err != nil {
+				log.Warn("could not save dev VAPID keys", "err", err)
+			}
+		}
+	}
+	return push.NewService(pool, log, pub, priv, subject), nil
 }
 
 func migrate(dbURL string) error {

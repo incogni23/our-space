@@ -1,0 +1,7 @@
+.git
+.devdb
+**/node_modules
+web/.next
+web/.next-*
+*.log
+.env*

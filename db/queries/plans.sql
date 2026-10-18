@@ -54,3 +54,17 @@ WHERE id = $1 AND relationship_id = $2 AND status IN ('proposed', 'confirmed');
 -- name: MarkPinPlanned :exec
 UPDATE pins SET status = 'planned', updated_at = now()
 WHERE id = $1 AND relationship_id = $2 AND status = 'saved';
+
+-- name: AddPlanEvent :exec
+INSERT INTO plan_events (plan_id, user_id, action, at_time) VALUES ($1, $2, $3, $4);
+
+-- name: PlanEvents :many
+SELECT user_id, action, at_time, created_at FROM plan_events WHERE plan_id = $1 ORDER BY id;
+
+-- name: HistoryPlans :many
+-- Everything that's over: past one-offs, and anything declined or cancelled.
+SELECT * FROM plans
+WHERE relationship_id = $1
+  AND (status IN ('declined', 'cancelled') OR (repeat = 'none' AND starts_at < now() - interval '2 hours'))
+ORDER BY coalesce(responded_at, updated_at, starts_at) DESC
+LIMIT 300;

@@ -27,8 +27,10 @@ import (
 	"betweenus/api/internal/notes"
 	"betweenus/api/internal/pairing"
 	"betweenus/api/internal/plans"
+	"betweenus/api/internal/push"
 	"betweenus/api/internal/store"
 	"betweenus/api/internal/story"
+	"betweenus/api/internal/together"
 	"betweenus/api/internal/token"
 	"betweenus/api/internal/unfurl"
 )
@@ -41,6 +43,8 @@ const (
 type Config struct {
 	// Blobs stores photo bytes (local folder in development, S3-compatible otherwise).
 	Blobs media.Blobs
+	// Push sends Web Push notifications; nil or keyless disables them.
+	Push *push.Service
 	// AppOrigin is where the web app lives, used to build invite links.
 	AppOrigin    string
 	CookieSecure bool
@@ -64,6 +68,8 @@ type Server struct {
 	notes  *notes.Service
 	jobs   *jobs.Runner
 	made   *made.Service
+
+	together *together.Service
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
@@ -71,6 +77,7 @@ func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *p
 		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log),
 		unfurl: unfurl.New(), notes: notes.NewService(pool), jobs: jobs.NewRunner(pool, log)}
 	s.made = made.NewService(pool, s.media)
+	s.together = together.NewService(pool)
 	return s
 }
 
@@ -85,7 +92,10 @@ func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
+	r.Use(securityHeaders)
+	r.Use(s.rateLimit)
 	r.Use(s.requireJSON)
+	r.Use(s.idempotency)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := s.pool.Ping(r.Context()); err != nil {
@@ -114,6 +124,9 @@ func (s *Server) Routes() http.Handler {
 			r.Use(s.withSession(false))
 			r.Get("/me", s.handleMe)
 			r.Get("/live", s.handleLive)
+			r.Get("/push/key", s.handlePushKey)
+			r.Post("/push/subscribe", s.handlePushSubscribe)
+			r.Post("/push/unsubscribe", s.handlePushUnsubscribe)
 			r.Patch("/me", s.handleUpdateProfile)
 			r.Post("/me/recovery-codes", s.handleRecoveryCodes)
 			r.Post("/me/phone/start", s.handlePhoneStart)
@@ -141,6 +154,7 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/pins/{id}/restore", s.handleRestorePin)
 			r.Post("/pins/{id}/notes", s.handleAddPinNote)
 			r.Get("/plans", s.handleListPlans)
+			r.Get("/plans/history", s.handlePlanHistory)
 			r.Post("/plans", s.handleCreatePlan)
 			r.Get("/plans/{id}", s.handleGetPlan)
 			r.Patch("/plans/{id}", s.handleUpdatePlan)
@@ -171,17 +185,26 @@ func (s *Server) Routes() http.Handler {
 			r.Get("/creations/{id}/download", s.handleCreationDownload)
 			r.Post("/creations/{id}/links", s.handleCreateLink)
 			r.Post("/creations/{id}/links/{linkId}/revoke", s.handleRevokeLink)
+			r.Get("/together", s.handleTogetherCurrent)
+			r.Post("/together", s.handleTogetherStart)
+			r.Get("/together/{id}", s.handleTogetherGet)
+			r.Get("/together/{id}/stream", s.handleTogetherStream)
+			r.Post("/together/{id}/act", s.handleTogetherAct)
+			r.Post("/together/{id}/say", s.handleTogetherSay)
 		})
 	})
 	return r
 }
 
-// requireJSON: mutating requests must be application/json. With SameSite=Lax
-// cookies this stops cross-site form posts (a cross-origin JSON post needs CORS).
+// requireJSON: POST/PATCH must be application/json (photo uploads: multipart plus
+// a custom header). With SameSite=Lax cookies this stops cross-site form posts,
+// since a cross-origin JSON request needs CORS, which we never grant.
 func (s *Server) requireJSON(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
+		case http.MethodDelete:
+			// Bodyless. A cross-site DELETE needs a CORS preflight, which we never grant.
 		default:
 			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 			if (r.URL.Path == "/api/v1/media" || strings.HasSuffix(r.URL.Path, "/render")) && mt == "multipart/form-data" {
@@ -376,6 +399,14 @@ func (s *Server) domainError(w http.ResponseWriter, r *http.Request, err error) 
 		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
 	case errors.Is(err, boards.ErrBoardRequired):
 		writeError(w, http.StatusBadRequest, "board_required", "Choose a board, or make a new one.")
+	case errors.Is(err, together.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That session isn’t here any more.")
+	case errors.Is(err, together.ErrInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
+	case errors.Is(err, together.ErrEnded):
+		writeError(w, http.StatusGone, "together_ended", "This session has ended.")
+	case errors.Is(err, together.ErrNotBothHere):
+		writeError(w, http.StatusConflict, "not_both_here", "Waiting for both of you to be here.")
 	case errors.Is(err, made.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "That isn’t here any more.")
 	case errors.Is(err, made.ErrInvalid):

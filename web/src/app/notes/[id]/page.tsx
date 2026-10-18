@@ -9,7 +9,7 @@ import { NoteForm, toPayload, type NoteDraft } from "@/components/note-form";
 import { ErrorText, Loading, Screen } from "@/components/ui";
 import { api, errorMessage, type Note } from "@/lib/api";
 import { useLiveTick } from "@/lib/live";
-import { dayLong, dayKey, toInputs } from "@/lib/time";
+import { dayLong, dayKey, timeOnly, toInputs } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
 
 // One note: sealed envelope, letter, or (for its writer, before delivery) the editor.
@@ -114,7 +114,7 @@ export default function NoteDetail() {
         <div className="flex flex-col items-center gap-5 pt-6 text-center">
           <div className="relative h-[180px] w-full max-w-[300px]" aria-hidden="true">
             <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
-            <span className="absolute inset-x-0 top-0 h-24 bg-[#EBD3CE] [clip-path:polygon(0_0,100%_0,50%_100%)] dark:bg-[#5A3D43]" />
+            <span className="absolute inset-x-0 top-0 h-24 bg-shared-flap [clip-path:polygon(0_0,100%_0,50%_100%)]" />
           </div>
           <h1 className="m-0 font-display text-[28px] font-normal leading-[1.15]">A note from {pName} is waiting.</h1>
           <p className="m-0 text-[15px] leading-[1.55] text-muted">Opens {opensLabel(note.deliverAt!, myTz)}, your time. Only who and when are shown until then.</p>
@@ -148,7 +148,53 @@ export default function NoteDetail() {
       ) : null}
 
       {note.mine && note.state === "delivered" ? (
-        <p className="m-0 text-center text-xs text-muted">You’ll only ever see “Delivered”. Whether it was read stays with {pName}.</p>
+        <div className="flex items-center gap-2.5 rounded-(--radius-card) border border-line bg-surface px-3.5 py-3 text-sm">
+          {note.readAt ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--status-ok-ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12.5l4.5 4.5L19 7" />
+              </svg>
+              <span>
+                <strong className="font-semibold">Read</strong> {dayLong(note.readAt, myTz)}, {timeOnly(note.readAt, myTz)}
+              </span>
+            </>
+          ) : (
+            <span className="text-muted">Delivered. {pName} hasn’t opened it yet.</span>
+          )}
+        </div>
+      ) : null}
+
+      {!note.mine && note.state === "delivered" ? (
+        <p className="m-0 text-center text-xs text-muted">{pName} can see when you read this.</p>
+      ) : null}
+
+      {note.mine && (note.state === "scheduled" || note.state === "delivered") ? (
+        <section aria-labelledby="theirview" className="flex flex-col gap-2.5 border-t border-line pt-4">
+          <h2 id="theirview" className="m-0 font-stamp text-[10px] uppercase tracking-[0.1em] text-muted">
+            What {pName} sees
+          </h2>
+          {note.state === "scheduled" ? (
+            <div className="flex items-center gap-3.5">
+              <span className="relative h-16 w-24 flex-none" aria-hidden="true">
+                <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
+                <span className="absolute inset-x-0 top-0 h-9 bg-shared-flap [clip-path:polygon(0_0,100%_0,50%_100%)]" />
+              </span>
+              <span className="text-sm leading-[1.45]">
+                “A note from {me.user.displayName || "you"} is waiting. Opens {opensLabel(note.deliverAt!, pTz)}.” Only who and when, until then.
+              </span>
+            </div>
+          ) : (
+            <div className="relative">
+              <div className="flex flex-col gap-2 rounded-(--radius-note) bg-surface p-3.5 shadow-(--shadow-paper)">
+                <span className="line-clamp-3 font-display text-base italic leading-[1.4]">{note.body}</span>
+                <span className="font-stamp text-[10px] uppercase tracking-[0.08em] text-muted">
+                  From {me.user.displayName || "you"} · {dayLong(note.deliveredAt!, pTz)}
+                </span>
+              </div>
+              <span className="mt-1.5 block text-xs text-muted">With “{me.user.displayName || "You"} can see when you read this.”</span>
+            </div>
+          )}
+        </section>
       ) : null}
 
       {!readOnly && !note.mine && note.state === "delivered" ? (

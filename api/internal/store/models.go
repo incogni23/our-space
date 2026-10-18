@@ -11,6 +11,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type AuditEvent struct {
+	ID             int64
+	UserID         *uuid.UUID
+	RelationshipID *uuid.UUID
+	Action         string
+	Ip             *netip.Addr
+	Detail         []byte
+	CreatedAt      time.Time
+}
+
 type Board struct {
 	ID             uuid.UUID
 	RelationshipID uuid.UUID
@@ -178,6 +188,25 @@ type Plan struct {
 	Remind            string
 }
 
+type PlanEvent struct {
+	ID        int64
+	PlanID    uuid.UUID
+	UserID    uuid.UUID
+	Action    string
+	AtTime    *time.Time
+	CreatedAt time.Time
+}
+
+type PushSubscription struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	Endpoint   string
+	P256dh     string
+	Auth       string
+	CreatedAt  time.Time
+	LastUsedAt *time.Time
+}
+
 type RecoveryCode struct {
 	UserID    uuid.UUID
 	CodeHash  []byte
@@ -242,6 +271,21 @@ type ShareLink struct {
 	RevokedAt      *time.Time
 	RevokedBy      *uuid.UUID
 	CreatedAt      time.Time
+}
+
+type TogetherSession struct {
+	ID             uuid.UUID
+	RelationshipID uuid.UUID
+	StartedBy      uuid.UUID
+	Title          string
+	Url            *string
+	Status         string
+	PositionMs     int64
+	PositionAt     time.Time
+	PausedReason   *string
+	UpdatedBy      *uuid.UUID
+	CreatedAt      time.Time
+	EndedAt        *time.Time
 }
 
 type User struct {

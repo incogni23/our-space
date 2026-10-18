@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { clearOutbox } from "@/lib/outbox";
+import { forgetThisDevice, pushState, turnOffPush, turnOnPush, type PushState } from "@/lib/push";
 import { Button, Card, ErrorText, Frames, Loading, Screen, Stamp } from "@/components/ui";
 import { EXPORT_URL, api, errorMessage, homeFor, partnerOf } from "@/lib/api";
 import { useMe } from "@/lib/use-me";
@@ -18,6 +20,24 @@ export default function Settings() {
   const router = useRouter();
   const { me, loading } = useMe();
   const [codes, setCodes] = useState<string[] | null>(null);
+  const [push, setPush] = useState<PushState | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    void pushState().then(setPush).catch(() => setPush("unsupported"));
+  }, []);
+
+  async function togglePush() {
+    setPushBusy(true);
+    setError(null);
+    try {
+      setPush(push === "on" ? await turnOffPush() : await turnOnPush());
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setPushBusy(false);
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +59,8 @@ export default function Settings() {
   }
 
   async function signOut() {
+    await forgetThisDevice();
+    clearOutbox();
     await api("/auth/sign-out", { body: {} }).catch(() => {});
     router.replace("/");
   }
@@ -97,6 +119,39 @@ export default function Settings() {
             </ul>
           </Card>
         ) : null}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <Stamp>Notifications</Stamp>
+        <div className="flex min-h-[60px] items-center gap-3 rounded-(--radius-card) border border-line bg-surface px-3.5 py-2.5">
+          <span className="flex flex-1 flex-col gap-0.5">
+            <span className="text-[15px] font-medium">On this device</span>
+            <span className="text-[13px] leading-[1.4] text-muted">
+              {push === "on"
+                ? "Only for things with a time: a note opening, a plan reminder. Never what a note says."
+                : push === "denied"
+                  ? "Notifications are blocked for this site in your browser settings."
+                  : push === "ios-install"
+                    ? "On iPhone, add Between Us to your Home Screen first (Share › Add to Home Screen)."
+                    : push === "unsupported"
+                      ? "This browser can’t show notifications."
+                      : "Off. You’ll still see everything in the app."}
+            </span>
+          </span>
+          {push === "on" || push === "off" ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={push === "on"}
+              aria-label="Notifications on this device"
+              onClick={togglePush}
+              disabled={pushBusy}
+              className={`relative h-8 w-[52px] flex-none rounded-2xl ${push === "on" ? "bg-action" : "bg-line-control"}`}
+            >
+              <span className={`absolute top-[3px] size-[26px] rounded-full bg-surface transition-[left] duration-(--dur-quick) ${push === "on" ? "left-[23px]" : "left-[3px]"}`} />
+            </button>
+          ) : null}
+        </div>
       </section>
 
       {space?.status === "active" ? (

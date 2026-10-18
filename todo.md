@@ -28,7 +28,7 @@ Design tokens: `design/tokens.json`, `design/tokens.css` (v0.1, match canvas 4.1
 | Database | PostgreSQL 16 |
 | DB access | pgx v5 + sqlc |
 | Migrations | goose (SQL files in `db/migrations`) |
-| Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; WebSockets later for Together sessions |
+| Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; Together sessions use SSE + POST (in-memory presence, single instance for now) |
 | Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) — `api/internal/jobs` |
 | Media | S3-compatible object storage (MinIO locally) |
 | Calls | Managed WebRTC (later) |
@@ -57,7 +57,7 @@ todo.md
 - [x] goose migrations + sqlc config wired to `db/`
 - [x] Next.js app with Tailwind theme generated from `tokens.css` (light + evening)
 - [x] Fonts: Newsreader, DM Sans, DM Mono
-- [ ] GitHub Actions: go vet/test (with Postgres service), web lint/typecheck/build
+- [x] GitHub Actions: sqlc diff, gofmt, go vet, go test -race with Postgres; web lint, typecheck, build
 
 ## Phase 1 · Identity & exclusive pairing (weeks 1–2)
 
@@ -150,12 +150,30 @@ Schema: `creations` (spec + rendered image as its own media row, version), `crea
 - [ ] F5 Our public side (shared name, bio ideas, look, profile picture) — changes need partner OK
 - [ ] F3 Reel Maker (server-side video rendering) — Later
 
-## Phase 5 · Polish & safety (week 7)  ← next
+## Product decisions made during the build
 
-- [ ] All states from canvas 5.2 (empty, error, sensitive)
-- [ ] Evening theme, reduced motion, 44px targets, contrast checks
-- [ ] Security pass: rate limits, authz on every relationship-scoped query, audit log, OWASP checks
-- [ ] Together prototype (shared playback)
+Kept in sync with the canvas (5.2 States, 5.4 Product calls, 4.3 Content, prototype stickies).
+
+- 2026-10-18 · Read receipts: the note's writer sees when it was read (replaces the canvas's "never Opened"); the reader is told "<name> can see when you read this". Canvas updated (5.2 Notes, 5.4 #05, 4.3 NoteLetter).
+- 2026-10-18 · Plan history: plans are never deleted; History tab shows past, declined and cancelled plans; each plan keeps a "What happened" timeline. Canvas updated (5.4 #07, sticky on prototype row B–D).
+
+## Phase 5 · Polish & safety (week 7)  ← in progress
+
+- [x] Security headers: CSP, frame-ancestors none, nosniff, referrer and permissions policy, HSTS in production; strict CSP on API responses
+- [x] Per-session/IP rate limits on the whole API (reads 600/min, writes 120/min; OTP limits stay in Postgres)
+- [x] Idempotency-Key replay for retried POSTs (no duplicate pins/notes after a dropped connection)
+- [x] Installable PWA: manifest, icons (emblem), service worker; pages and your data readable offline from the last copy; cleared on sign-out
+- [x] Offline outbox: pins, pin notes and notes saved offline wait ("N waiting to send") and send when back; never shown as sent early
+- [x] Web Push for things with a time: note opening ("A note is here for you", lock-screen safe) and plan reminders; endpoints restricted to known push services; VAPID keys from env (dev keys kept in .devdb)
+- [x] 5.2 states sweep: added "Dev said yes to coffee" plan-answer notice (in-app, no push); others covered
+- [x] Plans empty state: suggests the oldest unplanned pin ("Little Ondu is still waiting for a date")
+- [x] Evening theme audit: no hard-coded colours outside intentional photo overlays; envelope flap is now a token
+- [x] Keyboard: soft-launch crop point moves with arrow keys
+- [ ] Screen-reader pass on a real device (VoiceOver/TalkBack)
+- [x] Authorization review of every route (all content scoped to the caller's space; fixed: DELETE requests were refused by the JSON guard)
+- [x] Audit log of sensitive actions: sign-in, recovery code used, start fresh, number changed, recovery codes regenerated, space created/joined/left
+- [x] Together v1 (5.4 #04): start a session (title + optional link), partner invited (notice + push), presence only inside the session and never stored, shared 3-2-1 start, pause/resume/±10s for both, auto-pause when a partner's connection drops (held 5 min, 5.2), messages not saved. SSE + POST instead of WebSockets (works through the proxy)
+- [ ] Together: true sync with providers (later); multi-instance presence
 
 ## Phase 6b · Subscription (do last, before beta) (canvas row H, handoff 5.5)
 
@@ -187,6 +205,8 @@ UI
 
 ## Phase 6 · Beta (week 8)
 
+- [x] Docker images: `Dockerfile.api` (distroless, non-root), `Dockerfile.web` (Next standalone); `docker-compose.yml` with Postgres + MinIO for a full local stack (not yet run: Docker isn't installed on this machine)
+
 - [ ] Deploy (managed containers + managed Postgres + S3)
 - [ ] Small couples beta, feedback loop
 
@@ -198,6 +218,10 @@ UI
 - [ ] Calls via managed WebRTC
 
 ---
+
+## Ideas (not on the canvas)
+
+- Chat between the two of you, beyond notes and pin notes (maybe). Open questions: always-on thread vs. tied to plans/pins; read receipts consistent with notes; how it fits "no global presence" (5.4).
 
 ## Open questions
 

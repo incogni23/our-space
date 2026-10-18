@@ -248,8 +248,16 @@ export default function CreationPage() {
                 <canvas
                   ref={canvasRef}
                   onClick={setFocus}
+                  tabIndex={soft && spec.reveal !== "full" && step === "look" ? 0 : -1}
+                  onKeyDown={(e) => {
+                    if (!soft || spec.reveal === "full") return;
+                    const d = { ArrowLeft: [-0.03, 0], ArrowRight: [0.03, 0], ArrowUp: [0, -0.03], ArrowDown: [0, 0.03] }[e.key];
+                    if (!d) return;
+                    e.preventDefault();
+                    update({ focus: { x: Math.min(1, Math.max(0, spec.focus.x + d[0])), y: Math.min(1, Math.max(0, spec.focus.y + d[1])) } });
+                  }}
                   role="img"
-                  aria-label="Preview of what you’re making"
+                  aria-label={soft && spec.reveal !== "full" ? "Preview. Tap, or use the arrow keys, to choose what to crop in on." : "Preview of what you’re making"}
                   className={cx("max-h-[46vh] w-auto max-w-full bg-surface shadow-(--shadow-lift)", soft && spec.reveal !== "full" && step === "look" && "cursor-crosshair")}
                   style={{ aspectRatio: `${SIZES[spec.size].w} / ${SIZES[spec.size].h}` }}
                 />

@@ -1,0 +1,60 @@
+# Full stack locally: Postgres, MinIO (S3-compatible photos), API, web.
+#   docker compose up --build   →   http://localhost:3000   (every phone code is 123456)
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: betweenus
+      POSTGRES_PASSWORD: betweenus
+      POSTGRES_DB: betweenus
+    volumes: [db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U betweenus"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: betweenus
+      MINIO_ROOT_PASSWORD: betweenus-secret
+    volumes: [minio:/data]
+    ports: ["9001:9001"]
+
+  minio-setup:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "until mc alias set local http://minio:9000 betweenus betweenus-secret; do sleep 1; done;
+      mc mb -p local/betweenus-media; exit 0"
+
+  api:
+    build: { context: ., dockerfile: Dockerfile.api }
+    depends_on:
+      db: { condition: service_healthy }
+      minio-setup: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: postgres://betweenus:betweenus@db:5432/betweenus?sslmode=disable
+      APP_ENV: development # dev OTP provider; production refuses it
+      DEV_FIXED_OTP: "123456"
+      APP_ORIGIN: http://localhost:3000
+      MEDIA_STORE: s3
+      S3_ENDPOINT: minio:9000
+      S3_BUCKET: betweenus-media
+      S3_ACCESS_KEY: betweenus
+      S3_SECRET_KEY: betweenus-secret
+      S3_USE_SSL: "false"
+      S3_REGION: us-east-1
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args: { API_ORIGIN: "http://api:8080" }
+    depends_on: [api]
+    ports: ["3000:3000"]
+
+volumes:
+  db:
+  minio:

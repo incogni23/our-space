@@ -125,7 +125,6 @@ function PlanDetail() {
   const n = daysUntil(next, tz);
   const theirs = partner ? theirTime(next, tz, partner.timeZone) : null;
   const sAt = suggesting ? instantFor(sDate, sTime, tz) : null;
-  const creator = plan.createdBy === me.user.id ? "You" : pName;
 
   return (
     <Screen className="gap-[18px] px-4 pb-[170px] pt-[52px]">
@@ -288,23 +287,41 @@ function PlanDetail() {
       ) : null}
 
       <div className="flex flex-col gap-2.5">
-        <span className="font-stamp text-[10px] uppercase tracking-[0.1em] text-muted">What happens next</span>
-        <div className="flex flex-col gap-2.5 text-sm leading-[1.45]">
-          <span className="flex gap-2.5">
-            <span className="mt-1.5 size-2 flex-none rounded-full bg-ink" />
-            <span>{creator} added this</span>
-          </span>
+        <span className="font-stamp text-[10px] uppercase tracking-[0.1em] text-muted">What happened</span>
+        <ol className="m-0 flex list-none flex-col gap-2.5 p-0 text-sm leading-[1.45]">
+          {(plan.events ?? []).map((e, i) => {
+            const who = e.userId === me.user.id ? "You" : pName;
+            const at = e.at ? ` ${dayShort(e.at, tz)}, ${timeOnly(e.at, tz)}` : "";
+            const text = {
+              created: `${who} planned it for${at}`,
+              accepted: `${who} said yes`,
+              declined: `${who} said not this time`,
+              suggested: `${who} suggested${at}`,
+              moved: `${who} moved it to${at}`,
+              edited: `${who} changed the details`,
+              cancelled: `${who} cancelled it`,
+            }[e.action];
+            return (
+              <li key={i} className="flex gap-2.5">
+                <span className="mt-1.5 size-2 flex-none rounded-full bg-ink" />
+                <span>
+                  {text}
+                  <span className="block text-xs text-muted">{dayShort(e.when, tz)}, {timeOnly(e.when, tz)}</span>
+                </span>
+              </li>
+            );
+          })}
           {plan.status === "proposed" ? (
-            <span className="flex gap-2.5">
+            <li className="flex gap-2.5">
               <span className="mt-1.5 size-2 flex-none rounded-full border-[1.5px] border-ink" />
               <span className="text-muted">
                 {st.tone === "wait"
-                  ? `${partner?.displayName || "They"} can accept, suggest another time, or say no. You’ll see the answer here.`
+                  ? `${partner?.displayName || "They"} can accept, suggest another time, or say no.`
                   : "Your turn: accept, suggest another time, or say no."}
               </span>
-            </span>
+            </li>
           ) : null}
-        </div>
+        </ol>
       </div>
 
       <ErrorText>{error}</ErrorText>

@@ -3,6 +3,7 @@ module betweenus
 go 1.26.0
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/google/uuid v1.6.0
@@ -17,6 +18,7 @@ require (
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.3 // indirect

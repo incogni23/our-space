@@ -20,6 +20,12 @@ cd web && pnpm install && pnpm dev
 Open http://localhost:3000. With `DEV_FIXED_OTP=123456` every phone code is `123456`.
 To try pairing, use a second browser profile (or a private window) for the partner.
 
+## Run with Docker
+
+```sh
+docker compose up --build   # Postgres, MinIO, API, web → http://localhost:3000
+```
+
 ## Layout
 
 ```
@@ -47,6 +53,7 @@ web/                 Next.js app
 | `APP_ORIGIN` | `http://localhost:3000` | used in invite links |
 | `TRUST_PROXY` | `false` | read client IP from `X-Forwarded-For` |
 | `MIGRATE_ON_START` | `true` | |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | dev: generated into `.devdb/vapid.json` | Web Push; required in production for notifications |
 | `MEDIA_STORE` | `fs` | `fs` (local folder) or `s3` (MinIO, AWS S3, Cloudflare R2…) |
 | `MEDIA_DIR` | `.devdb/media` | for `fs` |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_USE_SSL` | — | for `s3`; endpoint is host[:port], e.g. `localhost:9000` for MinIO |

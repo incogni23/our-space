@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { KindIcon } from "@/components/pin-card";
 import { Button, ErrorText, Frames, Loading, cx } from "@/components/ui";
 import { api, errorMessage, type Board, type Pin, type PinKind } from "@/lib/api";
+import { sendOrQueue } from "@/lib/outbox";
 import { useSpace } from "@/lib/use-space";
 
 /** Same rules as the server's classify(), for the live preview only. */
@@ -54,7 +55,11 @@ export default function Add() {
       const body: Record<string, unknown> = { text, note, title: kind === "idea" ? "" : title };
       if (newBoard?.trim()) body.newBoardName = newBoard.trim();
       else if (boardId) body.boardId = boardId;
-      const r = await api<{ pin: Pin }>("/pins", { body });
+      const r = await sendOrQueue<{ pin: Pin }>("/pins", body, text.slice(0, 60));
+      if (!r) {
+        router.replace("/boards"); // queued: the banner shows "waiting to send"
+        return;
+      }
       router.replace(`/boards/${r.pin.boardId}?saved=${r.pin.id}`);
     } catch (err) {
       setError(errorMessage(err));

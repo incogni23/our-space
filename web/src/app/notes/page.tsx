@@ -77,7 +77,7 @@ export default function Notes() {
           </div>
         )}
         <p className="m-0 pt-1 text-xs leading-[1.5] text-muted">
-          {pName} sees only who and when until a note opens. You’ll see “Delivered”, never whether it was read.
+          {pName} sees only who and when until a note opens. You’ll see when it’s been read.
         </p>
       </section>
 

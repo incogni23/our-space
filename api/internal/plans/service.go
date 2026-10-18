@@ -40,10 +40,22 @@ type Service struct {
 
 func NewService(pool *pgxpool.Pool) *Service { return &Service{pool: pool, Now: time.Now} }
 
-// View is a plan with its occurrences in a window (one for one-offs).
+// View is a plan with its occurrences in a window (one for one-offs) and, for a
+// single plan, everything that happened to it.
 type View struct {
 	Plan        store.Plan
 	Occurrences []time.Time
+	Events      []store.PlanEventsRow
+}
+
+// event records a move on a plan; plans and their history are never deleted.
+func event(ctx context.Context, q *store.Queries, planID, userID uuid.UUID, action string, at *time.Time) error {
+	return q.AddPlanEvent(ctx, store.AddPlanEventParams{PlanID: planID, UserID: userID, Action: action, AtTime: at})
+}
+
+// History is everything that's over: past one-offs, declined and cancelled plans.
+func (s *Service) History(ctx context.Context, sc Scope) ([]store.Plan, error) {
+	return store.New(s.pool).HistoryPlans(ctx, sc.SpaceID)
 }
 
 func loc(tz string) *time.Location {
@@ -222,6 +234,9 @@ func (s *Service) Create(ctx context.Context, sc Scope, in NewPlan) (store.Plan,
 			return err
 		}
 		p.Remind = in.Remind
+		if err := event(ctx, q, p.ID, sc.UserID, "created", &p.StartsAt); err != nil {
+			return err
+		}
 		return ScheduleReminders(ctx, q, p, s.Now())
 	})
 	return p, err
@@ -257,7 +272,11 @@ func (s *Service) Get(ctx context.Context, sc Scope, id uuid.UUID) (View, error)
 	if p.Repeat == "none" && len(occ) == 0 {
 		occ = []time.Time{p.StartsAt.In(loc(p.AnchorTz))}
 	}
-	return View{Plan: p, Occurrences: occ}, nil
+	events, err := store.New(s.pool).PlanEvents(ctx, id)
+	if err != nil {
+		return View{}, err
+	}
+	return View{Plan: p, Occurrences: occ, Events: events}, nil
 }
 
 // Respond: accept, decline, suggest another time, or accept a suggestion.
@@ -267,6 +286,13 @@ func (s *Service) Respond(ctx context.Context, sc Scope, id uuid.UUID, action, l
 	err := s.inTx(ctx, func(q *store.Queries) error {
 		var err error
 		if out, err = s.respond(ctx, q, sc, id, action, local, tz); err != nil {
+			return err
+		}
+		act, at := map[string]string{"accept": "accepted", "decline": "declined", "suggest": "suggested"}[action], &out.StartsAt
+		if action == "suggest" {
+			at = out.SuggestedStartsAt
+		}
+		if err := event(ctx, q, id, sc.UserID, act, at); err != nil {
 			return err
 		}
 		return ScheduleReminders(ctx, q, out, s.Now())
@@ -409,7 +435,10 @@ func (s *Service) update(ctx context.Context, q *store.Queries, sc Scope, id uui
 			out, err = q.RespondToPlan(ctx, store.RespondToPlanParams{
 				ID: id, RelationshipID: sc.SpaceID, Status: "proposed", RespondedBy: &me, SuggestedStartsAt: &tu, SuggestedBy: &me,
 			})
-			return err
+			if err != nil {
+				return err
+			}
+			return event(ctx, q, id, me, "suggested", &tu)
 		}
 		status := p.Status
 		if moved {
@@ -419,7 +448,13 @@ func (s *Service) update(ctx context.Context, q *store.Queries, sc Scope, id uui
 			ID: id, RelationshipID: sc.SpaceID, Title: title, Place: place, Notes: notes,
 			StartsAt: starts.UTC(), AnchorTz: in.TimeZone, Repeat: in.Repeat, Status: status,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		if moved {
+			return event(ctx, q, id, sc.UserID, "moved", &out.StartsAt)
+		}
+		return event(ctx, q, id, sc.UserID, "edited", nil)
 	}()
 	return out, err
 }
@@ -432,6 +467,9 @@ func (s *Service) Cancel(ctx context.Context, sc Scope, id uuid.UUID) error {
 		}
 		if n == 0 {
 			return ErrNotFound
+		}
+		if err := event(ctx, q, id, sc.UserID, "cancelled", nil); err != nil {
+			return err
 		}
 		return jobs.Cancel(ctx, q, JobRemind+":"+id.String()+":")
 	})
