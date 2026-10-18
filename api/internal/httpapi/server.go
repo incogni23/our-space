@@ -22,6 +22,7 @@ import (
 	"betweenus/api/internal/boards"
 	"betweenus/api/internal/jobs"
 	"betweenus/api/internal/live"
+	"betweenus/api/internal/made"
 	"betweenus/api/internal/media"
 	"betweenus/api/internal/notes"
 	"betweenus/api/internal/pairing"
@@ -62,12 +63,15 @@ type Server struct {
 	unfurl *unfurl.Client
 	notes  *notes.Service
 	jobs   *jobs.Runner
+	made   *made.Service
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
-	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool),
+	s := &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool),
 		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log),
 		unfurl: unfurl.New(), notes: notes.NewService(pool), jobs: jobs.NewRunner(pool, log)}
+	s.made = made.NewService(pool, s.media)
+	return s
 }
 
 // Start runs background work (live-event listener, job runner) until ctx ends.
@@ -96,6 +100,8 @@ func (s *Server) Routes() http.Handler {
 		r.Post("/auth/verify", s.handleVerifySignIn)
 		r.Post("/auth/sign-out", s.handleSignOut)
 		r.Get("/invitations/{token}", s.handlePreviewInvitation)
+		r.Get("/public/links/{token}", s.handlePublicLink)
+		r.Get("/public/links/{token}/image", s.handlePublicLinkImage)
 
 		// Sessions waiting for a second factor may only use these.
 		r.Group(func(r chi.Router) {
@@ -153,6 +159,18 @@ func (s *Server) Routes() http.Handler {
 			r.Patch("/notes/{id}", s.handleUpdateNote)
 			r.Delete("/notes/{id}", s.handleDeleteNote)
 			r.Post("/notes/{id}/keep", s.handleKeepNote)
+			r.Get("/creations", s.handleListCreations)
+			r.Post("/creations", s.handleCreateCreation)
+			r.Get("/creations/{id}", s.handleGetCreation)
+			r.Patch("/creations/{id}", s.handleUpdateCreation)
+			r.Delete("/creations/{id}", s.handleDeleteCreation)
+			r.Post("/creations/{id}/render", s.handleRenderCreation)
+			r.Post("/creations/{id}/audience", s.handleCreationAudience)
+			r.Post("/creations/{id}/respond", s.handleCreationRespond)
+			r.Post("/creations/{id}/withdraw", s.handleCreationWithdraw)
+			r.Get("/creations/{id}/download", s.handleCreationDownload)
+			r.Post("/creations/{id}/links", s.handleCreateLink)
+			r.Post("/creations/{id}/links/{linkId}/revoke", s.handleRevokeLink)
 		})
 	})
 	return r
@@ -166,7 +184,7 @@ func (s *Server) requireJSON(next http.Handler) http.Handler {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
 		default:
 			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
-			if r.URL.Path == "/api/v1/media" && mt == "multipart/form-data" {
+			if (r.URL.Path == "/api/v1/media" || strings.HasSuffix(r.URL.Path, "/render")) && mt == "multipart/form-data" {
 				// Photo uploads: a custom header a cross-site form can't send.
 				if r.Header.Get("X-BU-Upload") != "1" {
 					writeError(w, http.StatusForbidden, "bad_upload", "Upload from the app.")
@@ -358,6 +376,22 @@ func (s *Server) domainError(w http.ResponseWriter, r *http.Request, err error) 
 		writeError(w, http.StatusBadRequest, "invalid_input", "Check what you typed and try again.")
 	case errors.Is(err, boards.ErrBoardRequired):
 		writeError(w, http.StatusBadRequest, "board_required", "Choose a board, or make a new one.")
+	case errors.Is(err, made.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That isn’t here any more.")
+	case errors.Is(err, made.ErrInvalid):
+		writeError(w, http.StatusBadRequest, "invalid_input", "Something in that design didn’t work. Try again.")
+	case errors.Is(err, made.ErrNotCreator):
+		writeError(w, http.StatusForbidden, "not_creator", "Only the person who made it can change it.")
+	case errors.Is(err, made.ErrNotYourTurn):
+		writeError(w, http.StatusConflict, "not_your_turn", "Waiting on the other person.")
+	case errors.Is(err, made.ErrNotApproved):
+		writeError(w, http.StatusForbidden, "not_approved", "This needs both of you to say yes first.")
+	case errors.Is(err, made.ErrNotRendered):
+		writeError(w, http.StatusConflict, "not_rendered", "Preview it first.")
+	case errors.Is(err, made.ErrNotForExport):
+		writeError(w, http.StatusForbidden, "private", "Choose who sees it first.")
+	case errors.Is(err, media.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "That isn’t here any more.")
 	case errors.Is(err, notes.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "That note isn’t here any more.")
 	case errors.Is(err, notes.ErrInvalid):

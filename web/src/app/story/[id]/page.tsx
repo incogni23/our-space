@@ -96,6 +96,12 @@ export default function MemoryDetail() {
         </div>
       ) : null}
 
+      {!readOnly && (memory.photos?.length ?? 0) > 0 ? (
+        <Link href={`/made/new?memory=${memory.id}`} className="flex min-h-[52px] items-center justify-center rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline">
+          Make something
+        </Link>
+      ) : null}
+
       <ErrorText>{error}</ErrorText>
 
       {readOnly ? null : confirmDelete ? (
