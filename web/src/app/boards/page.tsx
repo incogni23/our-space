@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
-import { Button, ButtonLink, ErrorText, Loading, Screen, Title } from "@/components/ui";
+import { StatusStamp } from "@/components/print";
+import { Button, ButtonLink, ErrorText, Loading, PrintTitle, Rule, Screen, Tape } from "@/components/ui";
 import { api, errorMessage, type Board } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
 import { useLiveTick } from "@/lib/live";
@@ -45,15 +46,26 @@ export default function Boards() {
   if (!ready || boards === null) return <Loading />;
 
   return (
-    <Screen className="gap-4 px-4 pb-[120px] pt-14">
-      <div className="flex items-end justify-between">
-        <Title className="text-[32px]">Boards</Title>
-        {!adding && !readOnly ? (
-          <button type="button" onClick={() => setAdding(true)} className="min-h-11 px-1 text-sm font-medium text-ink underline underline-offset-[3px]">
-            New board
-          </button>
-        ) : null}
-      </div>
+    <Screen wide className="gap-4 px-4 pb-[120px] pt-[50px]">
+      <header className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <span className="font-type text-[11px] tracking-[0.16em] text-muted">THE SCRAPBOOK</span>
+          {!adding && !readOnly ? (
+            <button type="button" onClick={() => setAdding(true)} className="min-h-11 px-1 text-[13px] font-medium text-accent-ink">
+              + New board
+            </button>
+          ) : null}
+        </div>
+        <PrintTitle className="text-[56px] leading-[0.88]">Boards</PrintTitle>
+        <span className="origin-left -rotate-[1.5deg] font-hand text-2xl text-accent-ink">everything we keep meaning to do</span>
+        <Rule className="mt-1.5">
+          <span>
+            {boards.length} {boards.length === 1 ? "board" : "boards"}
+          </span>
+          <span>{boards.reduce((n, b) => n + b.pinCount, 0)} things</span>
+          <span className="text-accent-ink">{boards.reduce((n, b) => n + b.plannedCount, 0)} planned</span>
+        </Rule>
+      </header>
 
       {adding ? (
         <form onSubmit={create} className="flex gap-2">
@@ -84,7 +96,7 @@ export default function Boards() {
           <p className="m-0 pt-6 text-center text-[15px] text-muted">Nothing was saved here.</p>
         ) : (
         <div className="flex flex-col gap-3 pt-6 text-center">
-          <h2 className="m-0 font-display text-2xl font-normal">A board for anything.</h2>
+          <h2 className="m-0 font-display text-2xl font-bold italic">A board for anything.</h2>
           <p className="m-0 text-[15px] leading-[1.55] text-muted">Places, songs, someday trips. Start with one.</p>
           <ButtonLink href="/add" className="mt-2">
             Save something for us
@@ -92,25 +104,27 @@ export default function Boards() {
         </div>
         )
       ) : (
-        <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0">
-          {boards.map((b) => {
+        <ul className="m-0 grid list-none grid-cols-2 gap-x-3.5 gap-y-5 p-0 pt-2 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-8">
+          {boards.map((b, i) => {
             const by = people.find((p) => p.id === b.createdBy);
+            const rot = [-1.5, 1.2, 1, -1.2][i % 4];
             return (
-              <li key={b.id}>
+              <li key={b.id} className="relative">
                 <Link
                   href={`/boards/${b.id}`}
-                  className="flex min-h-[132px] flex-col justify-between gap-3 rounded-(--radius-card) border border-line bg-surface p-3.5 text-ink no-underline"
+                  className="flex min-h-[150px] flex-col justify-between gap-3 bg-paper p-3.5 text-ink no-underline shadow-[0_14px_24px_-14px_rgba(0,0,0,0.55)]"
+                  style={{ transform: `rotate(${rot}deg)` }}
                 >
+                  <span className="break-words font-display text-[22px] font-bold italic leading-[1.05]">{b.name}</span>
                   <span className="flex flex-col gap-1.5">
-                    <span className="font-display text-xl leading-[1.15]">{b.name}</span>
-                    <span className="h-1 w-7 rounded-[2px] bg-shared" />
-                  </span>
-                  <span className="text-xs text-muted">
-                    {b.pinCount} {b.pinCount === 1 ? "thing" : "things"}
-                    {b.plannedCount ? ` · ${b.plannedCount} planned` : ""}
-                    {by ? ` · ${by.displayName}` : ""}
+                    <span className="font-type text-[10px] uppercase tracking-[0.12em] text-muted">
+                      {b.pinCount} {b.pinCount === 1 ? "thing" : "things"}
+                      {by ? ` · ${by.id === people[0]?.id ? "yours" : by.displayName}` : ""}
+                    </span>
+                    {b.plannedCount ? <StatusStamp>{b.plannedCount} planned</StatusStamp> : null}
                   </span>
                 </Link>
+                <Tape tone={i % 2 ? "tape" : "petal"} className="left-1/2 -top-2 -ml-8" rotate={i % 2 ? 5 : -4} />
               </li>
             );
           })}

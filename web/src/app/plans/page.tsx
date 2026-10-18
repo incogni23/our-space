@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { PlanRow } from "@/components/plan-row";
-import { ButtonLink, ErrorText, Loading, Screen, Title, cx } from "@/components/ui";
+import { Chip } from "@/components/print";
+import { ButtonLink, ErrorText, Loading, PrintTitle, Screen, cx } from "@/components/ui";
 import { api, errorMessage, type Plan } from "@/lib/api";
 import { dayKey, fmt } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
@@ -90,33 +92,27 @@ export default function Plans() {
   const todayKey = dayKey(today, tz);
 
   return (
-    <Screen className="gap-4 px-4 pb-[120px] pt-14">
-      <div className="flex items-center justify-between">
-        <Title className="text-[34px]">Plans</Title>
-        {readOnly ? null : (
-        <ButtonLink href="/plans/new" className="min-h-11 w-auto px-3.5 text-sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Plan something
-        </ButtonLink>
-        )}
-      </div>
+    <Screen className="gap-4 px-4 pb-[120px] pt-[50px]">
+      <header className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <span className="font-type text-[11px] tracking-[0.16em] text-muted">THE CALENDAR</span>
+          {readOnly ? null : (
+            <Link href="/plans/new" className="flex min-h-11 items-center text-[13px] font-medium text-accent-ink">
+              + Plan something
+            </Link>
+          )}
+        </div>
+        <PrintTitle className="text-[56px] leading-[0.88]">Plans</PrintTitle>
+        <span className="origin-left -rotate-[1.5deg] font-hand text-2xl text-accent-ink">things to look forward to</span>
+      </header>
 
       {readOnly ? <ReadOnlyBanner name={spaceName} until={me.readOnlySpace?.until} /> : null}
 
-      <div role="radiogroup" aria-label="View" className="grid grid-cols-3 rounded-(--radius-control) bg-sunken p-[3px]">
+      <div role="radiogroup" aria-label="View" className="flex gap-1.5">
         {(["up", "month", "history"] as const).map((v) => (
-          <button
-            key={v}
-            type="button"
-            role="radio"
-            aria-checked={view === v}
-            onClick={() => setView(v)}
-            className={cx("min-h-10 rounded-[9px] text-sm font-medium text-ink", view === v && "bg-surface")}
-          >
+          <Chip key={v} on={view === v} onClick={() => setView(v)}>
             {v === "up" ? "Coming up" : v === "month" ? "Month" : "History"}
-          </button>
+          </Chip>
         ))}
       </div>
 
@@ -126,7 +122,7 @@ export default function Plans() {
         history === null ? null : history.length === 0 ? (
           <p className="m-0 pt-8 text-center text-[15px] text-muted">Plans you’ve had, and ones that didn’t happen, will collect here.</p>
         ) : (
-          <ul className="m-0 flex list-none flex-col overflow-hidden rounded-(--radius-card) border border-line bg-surface p-0">
+          <ul className="m-0 flex list-none flex-col overflow-hidden rounded-(--radius-card) bg-paper shadow-(--shadow-paper) p-0">
             {history.map((p, i) => {
               const who = p.respondedBy === me.user.id ? "you" : partner?.displayName || "them";
               const outcome =
@@ -143,10 +139,10 @@ export default function Plans() {
                   <a href={`/plans/${p.id}`} className="grid min-h-16 grid-cols-[52px_1fr] items-center gap-3 px-3.5 py-2.5 text-ink no-underline">
                     <span className="flex flex-col items-center">
                       <span className="font-stamp text-[10px] uppercase text-muted">{fmt(p.startsAt, tz, { month: "short" })}</span>
-                      <span className="font-display text-2xl leading-none">{fmt(p.startsAt, tz, { day: "numeric" })}</span>
+                      <span className="font-display text-2xl font-semibold leading-none">{fmt(p.startsAt, tz, { day: "numeric" })}</span>
                     </span>
                     <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className={cx("truncate text-[15px] font-semibold", p.status !== "confirmed" && "text-muted line-through decoration-1")}>{p.title}</span>
+                      <span className={cx("truncate font-display text-lg font-bold italic leading-tight", p.status !== "confirmed" && "text-muted line-through decoration-1")}>{p.title}</span>
                       <span className={cx("text-xs font-medium", tone)}>
                         {outcome} · {fmt(p.startsAt, tz, { year: "numeric", weekday: "short" })}
                       </span>
@@ -160,7 +156,7 @@ export default function Plans() {
       ) : view === "up" ? (
         upcoming.length === 0 ? (
           <div className="flex flex-col gap-2 pt-10 text-center">
-            <h2 className="m-0 font-display text-2xl font-normal">Nothing on the calendar yet.</h2>
+            <h2 className="m-0 font-display text-2xl font-bold italic">Nothing on the calendar yet.</h2>
             <p className="m-0 text-[15px] leading-[1.55] text-muted">
               {suggest ? `${suggest.title} is still waiting for a date.` : "Is there something you want to look forward to?"}
             </p>
@@ -174,7 +170,10 @@ export default function Plans() {
           <div className="flex flex-col gap-2.5">
             {groups.map((g) => (
               <div key={g.label} className="flex flex-col gap-2.5">
-                <span className="pt-1 font-stamp text-[10px] uppercase tracking-[0.1em] text-muted">{g.label}</span>
+                <span className="flex items-center gap-2.5 pt-1.5 font-type text-[11px] uppercase tracking-[0.16em]">
+                  {g.label}
+                  <span className="h-px flex-1 bg-ink" />
+                </span>
                 {g.items.map((o) => (
                   <PlanRow key={`${o.plan.id}-${o.at}`} plan={o.plan} at={o.at} me={me.user} partner={partner} />
                 ))}
@@ -189,20 +188,20 @@ export default function Plans() {
               type="button"
               aria-label="Previous month"
               onClick={() => setMonthOffset((m) => m - 1)}
-              className="flex size-11 items-center justify-center rounded-(--radius-control) border border-line bg-surface"
+              className="flex size-11 items-center justify-center rounded-(--radius-control) bg-paper shadow-(--shadow-paper)"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                 <path d="M15 6l-6 6 6 6" />
               </svg>
             </button>
-            <span className="font-display text-[22px]">
+            <span className="font-display text-[26px] font-bold italic">
               {first.toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" })}
             </span>
             <button
               type="button"
               aria-label="Next month"
               onClick={() => setMonthOffset((m) => m + 1)}
-              className="flex size-11 items-center justify-center rounded-(--radius-control) border border-line bg-surface"
+              className="flex size-11 items-center justify-center rounded-(--radius-control) bg-paper shadow-(--shadow-paper)"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
@@ -228,7 +227,7 @@ export default function Plans() {
                   key={key}
                   aria-label={label}
                   className={cx(
-                    "flex h-12 flex-col items-center justify-center gap-[3px] rounded-[10px] bg-surface text-sm font-medium",
+                    "flex h-12 flex-col items-center justify-center gap-[3px] rounded-[10px] bg-paper font-display text-base font-semibold",
                     key === todayKey && "border-2 border-ink",
                   )}
                 >
@@ -239,7 +238,7 @@ export default function Plans() {
                         key={o.plan.id + o.at}
                         className={cx(
                           "size-[5px] rounded-full",
-                          o.plan.repeat === "weekly" ? "shadow-[inset_0_0_0_1.5px_var(--text-primary)]" : "bg-ink",
+                          o.plan.repeat === "weekly" ? "shadow-[inset_0_0_0_1.5px_var(--accent-ink)]" : "bg-accent",
                         )}
                       />
                     ))}

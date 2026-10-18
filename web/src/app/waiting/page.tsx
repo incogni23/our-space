@@ -52,7 +52,7 @@ export default function Waiting() {
     <Screen className="gap-5 px-4 pt-14">
       <header className="flex min-h-11 items-center gap-2.5">
         <span className="flex">
-          <Avatar name={me.user.displayName} tint={me.user.personTint} ring />
+          <Avatar name={me.user.displayName} ink={me.user.ink} ring />
           <span className="ml-1.5 size-8 rounded-full border-[1.5px] border-dashed border-line-control" aria-hidden="true" />
         </span>
         <span className="flex flex-col">
@@ -68,7 +68,7 @@ export default function Waiting() {
 
       <div className="flex flex-col items-center gap-[18px] px-2 pb-1 pt-[18px] text-center">
         <div className="flex gap-[22px]" aria-hidden="true">
-          <div className="flex h-[108px] w-[84px] items-end rounded-lg border border-line bg-surface p-2 shadow-(--shadow-paper)">
+          <div className="flex h-[108px] w-[84px] items-end rounded-lg bg-paper shadow-(--shadow-paper) p-2 shadow-(--shadow-paper)">
             <span className="font-stamp text-[9px] tracking-[0.1em] text-muted">
               {(me.user.displayName || "you").slice(0, 1).toUpperCase()}
             </span>
@@ -78,14 +78,14 @@ export default function Waiting() {
 
         {invite?.state === "not_accepted" ? (
           <>
-            <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">The invite wasn’t accepted.</h1>
+            <h1 className="m-0 font-display text-[34px] font-black italic leading-[0.95]">The invite wasn’t accepted.</h1>
             <p className="m-0 max-w-[320px] text-[15px] leading-[1.55] text-muted">
               That’s all we know. You can invite again or close the space.
             </p>
           </>
         ) : (
           <>
-            <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">
+            <h1 className="m-0 font-display text-[34px] font-black italic leading-[0.95]">
               {invite ? `${Name} hasn’t joined yet.` : "Nobody’s invited yet."}
             </h1>
             <p className="m-0 max-w-[320px] text-[15px] leading-[1.55] text-muted">
@@ -96,7 +96,7 @@ export default function Waiting() {
       </div>
 
       {invite?.state === "waiting" ? (
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+        <div className="overflow-hidden rounded-2xl bg-paper shadow-(--shadow-paper)">
           <div className="flex flex-col gap-1 px-4 py-3.5">
             <span className="text-[15px] font-semibold">Invite sent to {Name}</span>
             <span className="flex items-center gap-1.5 text-[13px] text-time-ink">

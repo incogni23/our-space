@@ -170,7 +170,8 @@ Canvas page "★ v2 · Love, in print". Tokens in `design/families.css`.
 - [x] Pill buttons, floating dark pill nav (phones), desktop sidebar (laptops)
 - [x] Welcome (Nº 0), Our Space as this month's issue (Vol./Nº from monthsaries, cover story countdown, inside this issue, clocks, new from them, Together record, from the archive, next issue), letter with heart seal, board as scrapbook, Our Story as back issues, Pick your colours
 - [x] Photos black and white in the UI; small motion (stamp, record) off with reduced motion
-- [ ] Restyle remaining screens to match: add, pin detail, plans, plan detail, story memory, Made by Us studio, onboarding (phone, code, name, invite, waiting, join)
+- [x] Restyle remaining screens: Boards (taped tiles), Plans (ticket rows, chips), pin and plan detail (stamps, notes in each person's ink), add, plan/memory/note sheets (letter editor on lined paper), Made by Us, Together, v2 avatars (initial in your ink), chips instead of segmented controls
+- [ ] Onboarding (phone, code, name, invite, waiting, join) and the Made by Us studio steps: on the new tokens and type, decorations still minimal — check against the canvas when it gets v2 versions
 - [ ] Keep serious screens plain (consent, privacy, billing, leaving, settings) but on the new tokens
 - [ ] "Heart" reaction on a letter (on the canvas; needs an API)
 - [ ] Our song (canvas shows a pinned song on Our Space; needs "make this our song" on a song pin; "Listen together" should open Together with it)

@@ -18,9 +18,9 @@ function Segmented<T extends string>({ label, value, options, onChange }: { labe
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-[13px] font-medium">{label}</span>
-      <div role="radiogroup" aria-label={label} className="grid rounded-(--radius-control) bg-sunken p-[3px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
         {options.map(([v, l]) => (
-          <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)} className={cx("min-h-10 rounded-[9px] text-[13px] text-ink", value === v ? "bg-surface font-semibold" : "font-medium")}>
+          <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)} className={cx("min-h-10 rounded-[20px] border-[1.5px] border-ink px-3.5 text-[13px] font-medium", value === v ? "bg-ink text-ground" : "bg-transparent text-ink")}>
             {l}
           </button>
         ))}
@@ -391,7 +391,7 @@ export default function CreationPage() {
           Made by Us
         </Link>
         {mine && !readOnly ? (
-          <button type="button" onClick={() => setStep("look")} className="min-h-11 rounded-(--radius-control) border border-line bg-surface px-3.5 text-sm font-medium text-ink">
+          <button type="button" onClick={() => setStep("look")} className="min-h-11 rounded-(--radius-control) bg-paper shadow-(--shadow-paper) px-3.5 text-sm font-medium text-ink">
             Edit
           </button>
         ) : null}
@@ -410,7 +410,7 @@ export default function CreationPage() {
       </div>
 
       {c.audience === "ask_export" || c.audience === "ask_link" ? (
-        <div className="flex flex-col rounded-(--radius-card) border border-line bg-surface">
+        <div className="flex flex-col rounded-(--radius-card) bg-paper shadow-(--shadow-paper)">
           {[me.user.id, partner?.id].filter(Boolean).map((uid, i) => {
             const d = c.decisions.find((x) => x.userId === uid);
             const isMe = uid === me.user.id;
@@ -474,7 +474,7 @@ export default function CreationPage() {
       ) : null}
 
       {c.audience === "ask_link" && c.status === "approved" && !readOnly ? (
-        <section className="flex flex-col gap-2.5 rounded-(--radius-card) border border-line bg-surface p-4" aria-labelledby="linkhead">
+        <section className="flex flex-col gap-2.5 rounded-(--radius-card) bg-paper shadow-(--shadow-paper) p-4" aria-labelledby="linkhead">
           <h2 id="linkhead" className="m-0 text-[15px] font-semibold">
             Preview link
           </h2>

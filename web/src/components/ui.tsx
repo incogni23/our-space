@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { inkColor } from "@/lib/theme";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 
 export function cx(...parts: Array<string | false | null | undefined>) {
@@ -248,31 +249,30 @@ export function Frames({ size = 20, filled = true, dashedSecond = false }: { siz
   );
 }
 
-const tintClasses = {
-  terracotta: "bg-terracotta-wash text-terracotta-ink",
-  sage: "bg-sage-wash text-sage-ink",
-  mauve: "bg-mauve-wash text-mauve-ink",
-} as const;
+const tintInk = { terracotta: "var(--accent-ink)", sage: "var(--second)", mauve: "var(--second)" } as const;
 
+/** v2: a Bodoni italic initial on the person's ink (falls back to their old tint). */
 export function Avatar({
   name,
   tint,
+  ink,
   size = 32,
   ring = false,
 }: {
   name: string;
-  tint: keyof typeof tintClasses;
+  tint?: keyof typeof tintInk;
+  ink?: string;
   size?: number;
   ring?: boolean;
 }) {
+  const bg = ink ? inkColor(ink) : tintInk[tint ?? "terracotta"];
   return (
     <span
       aria-hidden="true"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      style={{ width: size, height: size, fontSize: size * 0.5, background: bg }}
       className={cx(
-        "flex flex-none items-center justify-center rounded-full font-semibold",
-        tintClasses[tint],
-        ring && "shadow-[0_0_0_2px_var(--bg-ground)]",
+        "flex flex-none items-center justify-center rounded-full font-display font-bold italic text-[#FFFDF9]",
+        ring && "shadow-[0_0_0_2px_var(--ground)]",
       )}
     >
       {(name || "?").slice(0, 1).toUpperCase()}

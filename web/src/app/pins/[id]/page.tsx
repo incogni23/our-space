@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { KindIcon } from "@/components/pin-card";
 import { Avatar, ErrorText, Frames, Loading, Screen, cx } from "@/components/ui";
 import { ago, api, errorMessage, photoUrl, type Pin, type PinNote, type PinStatus } from "@/lib/api";
+import { inkColor } from "@/lib/theme";
 import { useSpace } from "@/lib/use-space";
 import { useLiveTick } from "@/lib/live";
 import { sendOrQueue } from "@/lib/outbox";
@@ -106,7 +107,7 @@ export default function PinDetail() {
           <KindIcon kind={pin.kind} size={14} />
           {pin.kind}
         </span>
-        <h1 className="m-0 break-words font-display text-[32px] font-normal leading-[1.05]">{pin.title}</h1>
+        <h1 className="m-0 break-words font-display text-[40px] font-black italic leading-[0.95] tracking-[-0.02em]">{pin.title}</h1>
         <span className="flex items-center gap-1.5 text-[13px] text-muted">
           <Frames size={13} />
           Between us · {pin.boardName} · saved by {mine ? "you" : by?.displayName}, {ago(pin.createdAt)}
@@ -149,7 +150,7 @@ export default function PinDetail() {
           href={pin.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex min-h-12 items-center justify-center gap-2 rounded-(--radius-control) border border-line bg-surface text-sm font-medium text-ink no-underline"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-(--radius-control) bg-paper shadow-(--shadow-paper) text-sm font-medium text-ink no-underline"
         >
           {pin.kind === "place" ? "Open in Maps" : pin.kind === "song" ? "Open to listen" : "Open link"}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -162,7 +163,7 @@ export default function PinDetail() {
         <span id="statuslabel" className="text-[13px] font-medium">
           Where it stands
         </span>
-        <div role="radiogroup" aria-labelledby="statuslabel" className="grid grid-cols-4 rounded-(--radius-control) bg-sunken p-[3px]">
+        <div role="radiogroup" aria-labelledby="statuslabel" className="flex flex-wrap gap-1.5">
           {STATUSES.map((s) => (
             <button
               key={s.id}
@@ -172,8 +173,8 @@ export default function PinDetail() {
               onClick={() => setStatus(s.id)}
               disabled={readOnly}
               className={cx(
-                "min-h-10 rounded-[9px] text-[13px] text-ink",
-                pin.status === s.id ? "bg-surface font-semibold shadow-[0_1px_2px_rgba(68,53,62,0.1)]" : "font-medium",
+                "min-h-10 rounded-[20px] border-[1.5px] px-3.5 text-[13px] font-medium",
+                pin.status === s.id ? "border-ink bg-ink text-ground" : "border-ink bg-transparent text-ink",
               )}
             >
               {s.label}
@@ -190,10 +191,12 @@ export default function PinDetail() {
           const a = people.find((p) => p.id === n.authorId);
           return (
             <div key={n.id} className="flex items-start gap-2.5">
-              {a ? <Avatar name={a.displayName} tint={a.personTint} size={24} /> : null}
+              {a ? <Avatar name={a.displayName} ink={a.ink} size={24} /> : null}
               <span className="flex flex-col gap-0.5">
-                <span className="text-[15px] leading-[1.45]">{n.body}</span>
-                <span className="text-xs text-muted">{ago(n.createdAt)}</span>
+                <span className="font-hand text-[22px] leading-[1.1]" style={{ color: inkColor(a?.ink ?? (n.authorId === me?.user.id ? "accent" : "second")) }}>
+                  {n.body}
+                </span>
+                <span className="font-type text-[10px] uppercase tracking-[0.12em] text-muted">{ago(n.createdAt)}</span>
               </span>
             </div>
           );
@@ -215,7 +218,7 @@ export default function PinDetail() {
             type="submit"
             aria-label="Send"
             disabled={busy || !reply.trim()}
-            className="flex size-12 items-center justify-center rounded-(--radius-control) border border-line bg-surface text-ink disabled:opacity-50"
+            className="flex size-12 items-center justify-center rounded-(--radius-control) bg-paper shadow-(--shadow-paper) text-ink disabled:opacity-50"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M5 12h14M13 6l6 6-6 6" />

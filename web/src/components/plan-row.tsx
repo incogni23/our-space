@@ -34,16 +34,13 @@ export function PlanRow({
     <Link
       href={`/plans/${plan.id}`}
       className={cx(
-        "grid grid-cols-[52px_1fr] items-center gap-3.5 rounded-2xl bg-surface px-3.5 py-3 text-ink no-underline",
-        highlight || st.tone === "you" ? "shadow-(--ring-new)" : "shadow-(--shadow-paper)",
+        "relative grid grid-cols-[1fr_72px] items-stretch rounded-[18px] bg-paper text-ink no-underline shadow-[0_12px_24px_-16px_rgba(0,0,0,0.4)]",
+        (highlight || st.tone === "you") && "outline-2 outline-offset-2 outline-accent",
       )}
     >
-      <span className="flex flex-col items-center border-r-[1.5px] border-dashed border-line pr-3">
-        <span className="font-stamp text-[10px] uppercase text-muted">{fmt(at, tz, { weekday: "short" })}</span>
-        <span className="font-display text-[28px] leading-none">{fmt(at, tz, { day: "numeric" })}</span>
-      </span>
-      <span className="flex min-w-0 flex-col gap-[3px]">
-        <span className="truncate text-[15px] font-semibold">{plan.title}</span>
+      <span className="flex min-w-0 flex-col gap-1 py-3 pl-4 pr-3">
+        <span className="font-type text-[10px] font-bold uppercase tracking-[0.16em] text-accent-ink">{plan.kind === "call" ? "Call" : "Plan"}</span>
+        <span className="truncate font-display text-[22px] font-bold italic leading-none">{plan.title}</span>
         <span className="text-[13px] text-muted">
           {timeOnly(at, tz)} you
           {theirs && !theirs.sameZoneTime ? ` · ${theirs.text} ${pName}` : ""}
@@ -68,6 +65,13 @@ export function PlanRow({
           {st.label}
         </span>
       </span>
+      <span className="flex flex-col items-center justify-center border-l-[1.5px] border-dashed border-muted">
+        <span className="font-type text-[10px] uppercase tracking-[0.14em] text-muted">{fmt(at, tz, { weekday: "short" })}</span>
+        <span className="font-display text-[32px] leading-none">{fmt(at, tz, { day: "numeric" })}</span>
+        <span className="font-type text-[10px] uppercase tracking-[0.14em] text-muted">{fmt(at, tz, { month: "short" })}</span>
+      </span>
+      <span className="absolute -top-2 right-[64px] size-4 rounded-full bg-ground" aria-hidden="true" />
+      <span className="absolute -bottom-2 right-[64px] size-4 rounded-full bg-ground" aria-hidden="true" />
     </Link>
   );
 }

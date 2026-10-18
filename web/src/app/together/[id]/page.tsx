@@ -110,7 +110,7 @@ export default function TogetherRoom() {
   if (s.status === "ended") {
     return (
       <Screen className="items-center justify-center gap-4 text-center">
-        <h1 className="m-0 font-display text-[30px] font-normal">That was nice.</h1>
+        <h1 className="m-0 font-display text-[40px] font-black italic">That was nice.</h1>
         <p className="m-0 text-[15px] text-muted">The session has ended. Messages from it weren’t kept.</p>
         <Link href="/space" className="font-medium">
           Back to your space
@@ -145,11 +145,11 @@ export default function TogetherRoom() {
 
         <div className="flex gap-3" aria-label="Who’s here">
           {[
-            { id: me.user.id, name: me.user.displayName || "You", tint: me.user.personTint, on: meHere && connected },
-            ...(partner ? [{ id: partner.id, name: partner.displayName || "Them", tint: partner.personTint, on: partnerHere }] : []),
+            { id: me.user.id, name: me.user.displayName || "You", ink: me.user.ink, on: meHere && connected },
+            ...(partner ? [{ id: partner.id, name: partner.displayName || "Them", ink: partner.ink, on: partnerHere }] : []),
           ].map((p) => (
             <span key={p.id} className="flex items-center gap-2 rounded-full bg-[rgba(243,235,225,0.08)] py-1 pl-1 pr-3 text-[13px]">
-              <Avatar name={p.name} tint={p.tint} size={26} />
+              <Avatar name={p.name} ink={p.ink} size={26} />
               {p.id === me.user.id ? "You" : p.name}
               <span className={cx("size-2 rounded-full", p.on ? "bg-[#B9C6AC]" : "bg-[#7A6D73]")} aria-label={p.on ? "here" : "not here"} />
             </span>

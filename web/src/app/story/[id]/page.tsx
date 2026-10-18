@@ -80,7 +80,7 @@ export default function MemoryDetail() {
         {memory.caption ? <p className="m-0 font-display text-[19px] italic leading-[1.4] text-muted">{memory.caption}</p> : null}
         {by ? (
           <span className="flex items-center gap-1.5 text-[13px] text-muted">
-            <Avatar name={by.displayName} tint={by.personTint} size={20} />
+            <Avatar name={by.displayName} ink={by.ink} size={20} />
             Added by {by.id === me?.user.id ? "you" : by.displayName}
           </span>
         ) : null}
@@ -105,7 +105,7 @@ export default function MemoryDetail() {
       <ErrorText>{error}</ErrorText>
 
       {readOnly ? null : confirmDelete ? (
-        <div className="flex flex-col gap-2 rounded-(--radius-card) border border-line bg-surface p-3.5">
+        <div className="flex flex-col gap-2 rounded-(--radius-card) bg-paper shadow-(--shadow-paper) p-3.5">
           <span className="text-sm">Remove this memory from Our Story for both of you?</span>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setConfirmDelete(false)} className="min-h-11 rounded-(--radius-control) border border-line text-sm font-medium">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { StatusChip } from "@/components/creation-status";
-import { ButtonLink, ErrorText, Loading, Screen } from "@/components/ui";
+import { ErrorText, Loading, Screen } from "@/components/ui";
 import { api, errorMessage, photoUrl, type Creation } from "@/lib/api";
 import { useLiveTick } from "@/lib/live";
 import { useSpace } from "@/lib/use-space";
@@ -35,14 +35,18 @@ export default function Made() {
         </svg>
         Our Story
       </Link>
-      <div className="flex items-center justify-between">
-        <h1 className="m-0 font-display text-[44px] font-black italic leading-[0.95] tracking-[-0.02em]">Made by Us</h1>
-        {readOnly ? null : (
-          <ButtonLink href="/made/new" className="min-h-11 w-auto px-3.5 text-sm">
-            Make something
-          </ButtonLink>
-        )}
-      </div>
+      <header className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <span className="font-type text-[11px] tracking-[0.16em] text-muted">THE STUDIO</span>
+          {readOnly ? null : (
+            <Link href="/made/new" className="flex min-h-11 items-center text-[13px] font-medium text-accent-ink">
+              + Make something
+            </Link>
+          )}
+        </div>
+        <h1 className="m-0 font-display text-[52px] font-black italic leading-[0.9] tracking-[-0.02em]">Made by Us</h1>
+        <span className="origin-left -rotate-[1.5deg] font-hand text-2xl text-accent-ink">nothing leaves unless you both say so</span>
+      </header>
       <ErrorText>{error}</ErrorText>
       {items && items.length === 0 ? (
         <p className="m-0 pt-6 text-center text-[15px] leading-[1.55] text-muted">

@@ -94,7 +94,7 @@ export default function Accept() {
       <Screen>
         <Logo />
         <div className="flex flex-col gap-2.5 pt-6">
-          <h1 className="m-0 font-display text-[32px] font-normal leading-[1.1]">{titles[problem.code] ?? "Something went wrong."}</h1>
+          <h1 className="m-0 font-display text-[34px] font-black italic leading-[0.95]">{titles[problem.code] ?? "Something went wrong."}</h1>
           <p className="m-0 text-[15px] leading-[1.55] text-muted">
             {problem.code === "invite_expired" || problem.code === "invite_unavailable" || problem.code === "invite_not_found"
               ? "Invites work once and last 3 days, so old links can’t be reused. Ask for a fresh one."
@@ -115,7 +115,7 @@ export default function Accept() {
       <Screen>
         <Logo />
         <div className="flex flex-col gap-2.5 pt-6">
-          <h1 className="m-0 font-display text-[32px] font-normal leading-[1.1]">Okay.</h1>
+          <h1 className="m-0 font-display text-[34px] font-black italic leading-[0.95]">Okay.</h1>
           <p className="m-0 text-[15px] leading-[1.55] text-muted">
             {p.inviterName} will see that the invite wasn’t accepted, nothing more.
           </p>
@@ -148,7 +148,7 @@ export default function Accept() {
           <Avatar name={p.inviterName} tint="terracotta" size={48} />
           <span className="text-base font-semibold">{p.inviterName}</span>
         </div>
-        <h1 className="m-0 font-display text-[32px] font-normal leading-[1.1] tracking-[-0.015em]">
+        <h1 className="m-0 font-display text-[34px] font-black italic leading-[0.95] tracking-[-0.015em]">
           {p.inviterName} invited you to share <span className="italic">{p.spaceName}.</span>
         </h1>
       </div>

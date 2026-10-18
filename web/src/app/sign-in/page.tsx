@@ -113,7 +113,7 @@ function SignIn() {
                 id="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="h-[52px] rounded-(--radius-control) border border-line-control bg-surface px-3 text-base font-medium text-ink"
+                className="h-[52px] w-[118px] flex-none truncate rounded-(--radius-control) border border-line-control bg-surface px-3 text-base font-medium text-ink"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>

@@ -79,7 +79,7 @@ export default function Add() {
       >
         <span className="h-1 w-9 self-center rounded-[2px] bg-line" aria-hidden="true" />
         <div className="flex items-center justify-between">
-          <h1 id="sheettitle" className="m-0 font-display text-[26px] font-normal">
+          <h1 id="sheettitle" className="m-0 font-display text-[32px] font-black italic leading-none">
             Save something for us
           </h1>
           <Link href="/space" aria-label="Close" className="-mr-2.5 flex size-11 items-center justify-center text-ink">

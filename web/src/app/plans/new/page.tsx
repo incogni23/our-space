@@ -111,7 +111,7 @@ function NewPlan() {
       >
         <span className="h-1 w-9 self-center rounded-[2px] bg-line" aria-hidden="true" />
         <div className="flex items-center justify-between gap-3">
-          <h1 id="plantitle" className="m-0 font-display text-[26px] font-normal">
+          <h1 id="plantitle" className="m-0 font-display text-[32px] font-black italic leading-none">
             {pin ? "Plan this" : "Plan something"}
           </h1>
           {pin ? <span className="truncate text-xs text-muted">From {pin.boardName}</span> : null}
@@ -130,7 +130,7 @@ function NewPlan() {
             placeholder="Coffee at Kaapi Katte"
             className="h-[50px] rounded-(--radius-control) border border-line-control bg-surface px-3.5 text-[17px] text-ink placeholder:text-muted focus:border-2 focus:border-ink focus:outline-none"
           />
-          <div role="radiogroup" aria-label="Kind" className="grid grid-cols-2 rounded-(--radius-control) bg-sunken p-[3px]">
+          <div role="radiogroup" aria-label="Kind" className="flex gap-1.5">
             {(["plan", "call"] as const).map((k) => (
               <button
                 key={k}
@@ -138,7 +138,7 @@ function NewPlan() {
                 role="radio"
                 aria-checked={kind === k}
                 onClick={() => setKind(k)}
-                className={cx("min-h-10 rounded-[9px] text-sm font-medium text-ink", kind === k && "bg-surface")}
+                className={cx("min-h-10 rounded-[20px] border-[1.5px] border-ink px-4 text-sm font-medium", kind === k ? "bg-ink text-ground" : "text-ink")}
               >
                 {k === "plan" ? "Meet up" : "Call"}
               </button>
@@ -235,7 +235,7 @@ function NewPlan() {
               id="premind"
               value={remind}
               onChange={(e) => setRemind(e.target.value as typeof remind)}
-              className="min-h-10 rounded-[10px] border border-line bg-surface px-2 text-sm text-ink"
+              className="min-h-10 rounded-[10px] bg-paper shadow-(--shadow-paper) px-2 text-sm text-ink"
             >
               <option value="evening_before">The evening before</option>
               <option value="hour_before">An hour before</option>

@@ -74,7 +74,7 @@ export function NoteForm({
           value={d.body}
           onChange={(e) => setD({ ...d, body: e.target.value })}
           placeholder="good morning, you"
-          className="resize-none rounded-(--radius-note) border border-line-control bg-surface px-4 py-3.5 font-display text-[19px] italic leading-[1.45] text-ink placeholder:text-muted focus:border-2 focus:border-ink focus:outline-none"
+          className="lined resize-none rounded-[2px] border-0 bg-paper bg-local [background-position:0_23px] px-[22px] pb-4 pt-[22px] font-type text-[15px] leading-[30px] text-ink shadow-[0_18px_30px_-20px_rgba(0,0,0,0.5)] placeholder:text-muted focus:outline-2 focus:outline-offset-2 focus:outline-ink"
         />
       </div>
 
@@ -113,7 +113,7 @@ export function NoteForm({
             <input id="ntime" type="time" value={d.time} onChange={(e) => setD({ ...d, time: e.target.value })} className="h-12 rounded-(--radius-control) border border-line-control bg-surface px-3 text-base text-ink" />
           </div>
           {differentZone ? (
-            <div role="radiogroup" aria-label="Whose time" className="grid grid-cols-2 rounded-(--radius-control) bg-sunken p-[3px]">
+            <div role="radiogroup" aria-label="Whose time" className="flex flex-wrap gap-1.5">
               {[true, false].map((theirs) => (
                 <button
                   key={String(theirs)}
@@ -121,7 +121,7 @@ export function NoteForm({
                   role="radio"
                   aria-checked={d.inTheirTime === theirs}
                   onClick={() => setD({ ...d, inTheirTime: theirs })}
-                  className={cx("min-h-10 rounded-[9px] text-sm font-medium text-ink", d.inTheirTime === theirs && "bg-surface")}
+                  className={cx("min-h-10 rounded-[20px] border-[1.5px] border-ink px-3.5 text-[13px] font-medium", d.inTheirTime === theirs ? "bg-ink text-ground" : "text-ink")}
                 >
                   {theirs ? `${pName}’s time (${cityOf(pTz)})` : `Your time (${cityOf(myTz)})`}
                 </button>

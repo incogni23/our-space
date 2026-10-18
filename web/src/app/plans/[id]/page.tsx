@@ -5,7 +5,9 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { planState } from "@/components/plan-row";
-import { Button, ErrorText, Loading, Screen, cx } from "@/components/ui";
+import { StatusStamp } from "@/components/print";
+import { inkColor } from "@/lib/theme";
+import { Button, ErrorText, Loading, Screen } from "@/components/ui";
 import { api, cityOf, errorMessage, type Plan } from "@/lib/api";
 import { dayKey, dayLong, dayShort, daysUntil, fmt, icsFor, instantFor, relDay, theirTime, timeOnly } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
@@ -16,7 +18,7 @@ function PlanDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const created = useSearchParams().get("created");
-  const { ready, me, partner, readOnly } = useSpace();
+  const { ready, me, partner, people, readOnly } = useSpace();
   const tick = useLiveTick(["plan."], ready);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [suggesting, setSuggesting] = useState(false);
@@ -149,18 +151,13 @@ function PlanDetail() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">{plan.title}</h1>
+        <h1 className="m-0 font-display text-[40px] font-black italic leading-[0.95] tracking-[-0.02em]">{plan.title}</h1>
         {open ? (
-          <span
-            className={cx(
-              "flex items-center gap-1.5 self-start rounded-lg px-2.5 py-1.5 text-[13px] font-semibold",
-              st.tone === "ok" ? "bg-ok-wash text-ok-ink" : st.tone === "you" ? "bg-shared-wash text-shared-ink" : "bg-sunken text-ink",
-            )}
-          >
+          <StatusStamp color={st.tone === "ok" ? "var(--accent-ink)" : st.tone === "you" ? "var(--accent-ink)" : "var(--text)"}>
             {st.tone === "ok" ? "Both in" : st.tone === "you" ? (plan.suggestedBy ? `${pName} suggested another time` : `${pName} asked you`) : st.label}
-          </span>
+          </StatusStamp>
         ) : (
-          <span className="self-start rounded-lg bg-sunken px-2.5 py-1.5 text-[13px] font-semibold">
+          <span className="self-start -rotate-2 rounded-[3px] border-[1.5px] border-muted px-1.5 py-[3px] font-type text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
             {plan.status === "declined" ? "Not this time" : "Cancelled"}
           </span>
         )}
@@ -179,7 +176,7 @@ function PlanDetail() {
         </div>
       ) : null}
 
-      <div className="flex flex-col rounded-(--radius-card) border border-line bg-surface">
+      <div className="flex flex-col rounded-(--radius-card) bg-paper shadow-(--shadow-paper)">
         <div className="grid grid-cols-[24px_1fr] items-start gap-3 p-3.5">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
             <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
@@ -238,7 +235,11 @@ function PlanDetail() {
             </span>
           </div>
         ) : null}
-        {plan.notes ? <p className="m-0 border-t border-sunken p-3.5 text-sm leading-[1.5]">{plan.notes}</p> : null}
+        {plan.notes ? (
+          <p className="m-0 border-t-[1.5px] border-dashed border-muted px-3.5 py-3 font-hand text-[22px] leading-[1.1]" style={{ color: inkColor(people.find((p) => p.id === plan.createdBy)?.ink ?? (plan.createdBy === me.user.id ? "accent" : "second")) }}>
+            {plan.notes}
+          </p>
+        ) : null}
       </div>
 
       {myTurn && !suggesting ? (
@@ -258,7 +259,7 @@ function PlanDetail() {
       ) : null}
 
       {suggesting ? (
-        <form onSubmit={(e) => respond("suggest", e)} className="flex flex-col gap-2.5 rounded-(--radius-card) border border-line bg-surface p-3.5">
+        <form onSubmit={(e) => respond("suggest", e)} className="flex flex-col gap-2.5 rounded-(--radius-card) bg-paper shadow-(--shadow-paper) p-3.5">
           <span className="text-[13px] font-medium">Another time · your time ({cityOf(tz)})</span>
           <div className="grid grid-cols-[1.3fr_1fr] gap-2">
             <label htmlFor="sdate" className="sr-only">
