@@ -152,8 +152,10 @@ Schema: `creations` (spec + rendered image as its own media row, version), `crea
 
 ## Product decisions made during the build
 
-- Read receipts: the note's writer sees when it was read (replaces the canvas's "never Opened"); the reader is told "<name> can see when you read this". Canvas 5.2 / 5.4 #05 to update.
-- Plan history: plans are never deleted; History tab shows past, declined and cancelled plans; each plan keeps a "What happened" timeline.
+Kept in sync with the canvas (5.2 States, 5.4 Product calls, 4.3 Content, prototype stickies).
+
+- 2026-10-18 · Read receipts: the note's writer sees when it was read (replaces the canvas's "never Opened"); the reader is told "<name> can see when you read this". Canvas updated (5.2 Notes, 5.4 #05, 4.3 NoteLetter).
+- 2026-10-18 · Plan history: plans are never deleted; History tab shows past, declined and cancelled plans; each plan keeps a "What happened" timeline. Canvas updated (5.4 #07, sticky on prototype row B–D).
 
 ## Phase 5 · Polish & safety (week 7)  ← in progress
 
