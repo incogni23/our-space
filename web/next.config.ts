@@ -5,10 +5,13 @@ const dev = process.env.NODE_ENV !== "production";
 
 // Everything is same-origin: the Go API is proxied under /api, fonts are self-hosted
 // by next/font, and photos are served by our API. Next needs inline scripts/styles;
-// the dev server also needs eval for fast refresh.
+// the dev server also needs eval for fast refresh. The one exception is Together:
+// the YouTube (no-cookie) and Spotify players, and audio/video files by link.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""} https://www.youtube.com https://open.spotify.com https://open.spotifycdn.com https://embed-cdn.spotifycdn.com`,
+  "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com",
+  "media-src 'self' https: blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data:",
   "font-src 'self'",

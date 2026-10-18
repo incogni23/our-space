@@ -157,6 +157,7 @@ Kept in sync with the canvas (5.2 States, 5.4 Product calls, 4.3 Content, protot
 - 2026-10-18 · Read receipts: the note's writer sees when it was read (replaces the canvas's "never Opened"); the reader is told "<name> can see when you read this". Canvas updated (5.2 Notes, 5.4 #05, 4.3 NoteLetter).
 - 2026-10-18 · Plan history: plans are never deleted; History tab shows past, declined and cancelled plans; each plan keeps a "What happened" timeline. Canvas updated (5.4 #07, sticky on prototype row B–D).
 - 2026-10-18 · Read receipt moment (v2 letter): "Read" is recorded when the recipient taps the heart seal (`POST /notes/{id}/open`), not when the page loads. Canvas v2 Letter copy updated.
+- 2026-10-18 · Together plays in step: YouTube links and Spotify tracks/episodes (and audio/video files) play inside the room for both, on the session's shared clock (3-2-1 start, pause, ±10s, drift correction; pausing in the player pauses both). One tap per device first (browser sound rules; Spotify needs the tap on its own ▶). Netflix and other apps keep the shared 3-2-1. Spotify logged out = 30s previews. Canvas sticky on the v2 page.
 - 2026-10-18 · Phone and laptop layouts: under 1024px the floating pill bar; from 1024px the v2 desktop sidebar (name, the two of you, every section, Save something, Our colours) and wide magazine layouts for Our Space, a board and Our Story.
 
 ## v2 · Love, in print (restyle)  ← in progress (branch v2-restyle)
@@ -172,7 +173,9 @@ Canvas page "★ v2 · Love, in print". Tokens in `design/families.css`.
 - [ ] Restyle remaining screens to match: add, pin detail, plans, plan detail, story memory, Made by Us studio, onboarding (phone, code, name, invite, waiting, join)
 - [ ] Keep serious screens plain (consent, privacy, billing, leaving, settings) but on the new tokens
 - [ ] "Heart" reaction on a letter (on the canvas; needs an API)
-- [ ] Our song (canvas shows a pinned song on Our Space; needs "make this our song" on a song pin)
+- [ ] Our song (canvas shows a pinned song on Our Space; needs "make this our song" on a song pin; "Listen together" should open Together with it)
+- [x] Together plays YouTube / Spotify / files in step inside the room (`components/synced-player.tsx`)
+- [ ] Together: test on iOS Safari and Android Chrome (stricter sound rules); Spotify sync is ~0.2–0.7s (it reports position about once a second)
 
 ## Phase 5 · Polish & safety (week 7)  ← in progress
 

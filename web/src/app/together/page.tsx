@@ -49,12 +49,12 @@ export default function TogetherStart() {
       <div className="flex flex-col gap-2.5">
         <Title>Together</Title>
         <Lead>
-          Watch or listen at the same time. You each play it in your own app; Between Us keeps the start and the pauses in step, so {pName} is never a scene ahead.
+          Watch or listen at the same time. YouTube and Spotify links play right here for both of you, in step: the same second, paused together. For anything else, you each press play on a shared 3-2-1.
         </Lead>
       </div>
       <form onSubmit={start} className="flex flex-1 flex-col gap-5">
         <Field id="ttitle" label="What are you putting on?" required maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Before Sunrise, or our playlist" autoFocus />
-        <Field id="turl" label={<>Link <span className="font-normal text-muted">(optional)</span></>} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Netflix, YouTube, Spotify…" inputClassName="text-[15px]" hint="So you both open the same thing." />
+        <Field id="turl" label={<>Link <span className="font-normal text-muted">(optional)</span></>} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="youtube.com/… or open.spotify.com/track/…" inputClassName="text-[15px]" hint="YouTube, Spotify tracks and episodes, or an audio/video file play here. Netflix and others: you each open it." />
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px] leading-[1.5] text-muted">
           <li>{pName} gets an invite. When you’re both here, you start on a shared 3-2-1.</li>
           <li>Either of you can pause for both. Messages here aren’t saved.</li>
