@@ -112,7 +112,9 @@ Onboarding UI (A1–A8)
 - [x] Boards & pins (C1–C3): save link/place/song/idea, first board auto-created, new board inline, visual/list views, filters, pin detail, status Saved/Planned/Done/Remembered, notes between you, remove + undo
 - [ ] Link previews (Open Graph unfurl worker, SSRF-safe) — cards are typographic until then
 - [ ] Awake hours (A8) + "both usually awake" overlap on B1
-- [ ] Plans (D1–D3): plan from a pin, time-zone aware times shown in both zones, RSVP, "Next together" + countdown on B1  ← next
+- [x] Plans (D1–D3): plan from a pin (pin → planned), meet-up or call, both clocks with day labels, weekly repeat on the anchor zone's wall clock, DST notes, invite to confirm → accept / suggest another time / decline, edit, cancel, .ics export, month view, "Next together" on B1
+- [ ] Trips (partner's travel dates → "you're both in Bengaluru that day", countdown on B1)
+- [ ] Plan reminders (needs the job runner, Phase 3)
 - [ ] Our Story timeline (E0): memories, trips, moments, "Made" filter
 - [ ] Media upload: presigned S3 uploads, resumable, location stripped, originals immutable; photo pins
 - [ ] Read-only access to an unlinked space until `read_only_until`

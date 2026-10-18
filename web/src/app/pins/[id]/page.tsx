@@ -117,6 +117,17 @@ export default function PinDetail() {
         </div>
       ) : null}
 
+      <Link
+        href={`/plans/new?pin=${pin.id}`}
+        className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+          <path d="M3.5 10h17M8 3v4M16 3v4" />
+        </svg>
+        Plan this
+      </Link>
+
       {pin.url ? (
         <a
           href={pin.url}

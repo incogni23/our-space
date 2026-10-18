@@ -35,6 +35,27 @@ export type Pin = {
   createdAt: string;
 };
 
+export type PlanStatus = "proposed" | "confirmed" | "declined" | "cancelled";
+
+export type Plan = {
+  id: string;
+  createdBy: string;
+  pinId?: string;
+  kind: "plan" | "call";
+  title: string;
+  place: string;
+  notes: string;
+  startsAt: string;
+  anchorTz: string;
+  repeat: "none" | "weekly";
+  status: PlanStatus;
+  suggestedStartsAt?: string;
+  suggestedBy?: string;
+  respondedBy?: string;
+  createdAt: string;
+  occurrences?: string[];
+};
+
 export type PinNote = { id: string; authorId: string; body: string; createdAt: string };
 
 export type Space = {
