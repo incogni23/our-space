@@ -73,18 +73,22 @@ type PhoneVerification struct {
 }
 
 type Pin struct {
-	ID             uuid.UUID
-	RelationshipID uuid.UUID
-	BoardID        uuid.UUID
-	CreatedBy      uuid.UUID
-	Kind           string
-	Title          string
-	Url            *string
-	Note           string
-	Status         string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      *time.Time
+	ID                 uuid.UUID
+	RelationshipID     uuid.UUID
+	BoardID            uuid.UUID
+	CreatedBy          uuid.UUID
+	Kind               string
+	Title              string
+	Url                *string
+	Note               string
+	Status             string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          *time.Time
+	PreviewStatus      string
+	PreviewSite        string
+	PreviewDescription string
+	PreviewMediaID     *uuid.UUID
 }
 
 type PinNote struct {

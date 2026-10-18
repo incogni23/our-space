@@ -35,9 +35,11 @@ func NewService(pool *pgxpool.Pool) *Service {
 
 // Space is the caller's active space, resolved once per request.
 type Space struct {
-	ID     uuid.UUID
-	Name   string
-	UserID uuid.UUID
+	ID            uuid.UUID
+	Name          string
+	UserID        uuid.UUID
+	ReadOnly      bool
+	ReadOnlyUntil *time.Time
 }
 
 func (s *Service) Resolve(ctx context.Context, userID uuid.UUID) (Space, error) {
@@ -302,4 +304,17 @@ func (s *Service) inTx(ctx context.Context, fn func(q *store.Queries) error) err
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+// ResolveRead is the space a user may read: their active space, or a closed one
+// still inside its read-only window.
+func (s *Service) ResolveRead(ctx context.Context, userID uuid.UUID) (Space, error) {
+	row, err := store.New(s.pool).ReadableSpaceFor(ctx, userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Space{}, ErrNoActiveSpace
+	}
+	if err != nil {
+		return Space{}, err
+	}
+	return Space{ID: row.ID, Name: row.Name, UserID: userID, ReadOnly: row.Status != "active", ReadOnlyUntil: row.ReadOnlyUntil}, nil
 }

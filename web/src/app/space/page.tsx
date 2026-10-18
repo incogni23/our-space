@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { NoticeBanner } from "@/components/notice-banner";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { PinCard } from "@/components/pin-card";
 import { Avatar, ButtonLink, Frames, Loading, Screen } from "@/components/ui";
 import { api, cityOf, homeFor, partnerOf, timeIn, type Pin, type Plan } from "@/lib/api";
@@ -31,9 +32,10 @@ export default function OurSpace() {
   const [nextPlan, setNextPlan] = useState<{ plan: Plan; at: string } | null>(null);
   const [now, setNow] = useState(() => new Date());
 
+  const readOnly = !!me && !me.space && !!me.readOnlySpace;
   useEffect(() => {
-    if (me && me.space?.status !== "active") router.replace(homeFor(me));
-  }, [me, router]);
+    if (me && me.space?.status !== "active" && !readOnly) router.replace(homeFor(me));
+  }, [me, router, readOnly]);
 
   const tick = useLiveTick(["pin.", "plan."], me?.space?.status === "active");
   const spaceTick = useLiveTick(["space."], !!me?.space);
@@ -59,6 +61,38 @@ export default function OurSpace() {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
+
+  if (readOnly && me?.readOnlySpace) {
+    const ro = me.readOnlySpace;
+    const other = ro.members.find((m) => m.id !== me.user.id);
+    return (
+      <Screen className="gap-[18px] px-4 pb-[120px] pt-14">
+        <div className="flex items-center gap-2.5">
+          <Avatar name={me.user.displayName} tint={me.user.personTint} ring />
+          <span className="flex flex-col">
+            <span className="font-display text-[19px] leading-[1.1]">{ro.name}</span>
+            <span className="text-xs text-muted">You and {other?.displayName || "your person"} · closed</span>
+          </span>
+        </div>
+        <ReadOnlyBanner name={ro.name} until={ro.until} />
+        <nav aria-label="What you shared" className="grid grid-cols-3 gap-2.5">
+          {([
+            ["/boards", "Boards"],
+            ["/plans", "Plans"],
+            ["/story", "Our Story"],
+          ] as const).map(([href, label]) => (
+            <Link key={href} href={href} className="flex min-h-20 items-center justify-center rounded-(--radius-card) border border-line bg-surface font-display text-lg text-ink no-underline">
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <ButtonLink href="/new" variant="secondary">
+          Start a new space
+        </ButtonLink>
+        <BottomNav current="space" readOnly />
+      </Screen>
+    );
+  }
 
   if (loading || !me?.space) return <Loading />;
   const partner = partnerOf(me);

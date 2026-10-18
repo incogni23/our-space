@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { Member, Pin, User } from "@/lib/api";
+import { photoUrl, type Member, type Pin, type User } from "@/lib/api";
 import { Avatar, cx } from "./ui";
 
 const kindLabel = { link: "Link", place: "Place", song: "Song", idea: "Idea" } as const;
@@ -65,6 +65,14 @@ export function PinCard({ pin, people, isNew }: { pin: Pin; people: Array<User |
         <div className="flex flex-col gap-2 rounded-(--radius-note) border border-line bg-surface p-3.5">
           <span className="font-display text-lg leading-[1.3]">{pin.title}</span>
         </div>
+      ) : pin.previewMediaId ? (
+        <div className="relative overflow-hidden rounded-(--radius-pin) bg-sunken">
+          {/* eslint-disable-next-line @next/next/no-img-element -- served by our API */}
+          <img src={photoUrl(pin.previewMediaId)} alt="" className="block max-h-[220px] w-full object-cover" loading="lazy" />
+          {isNew ? (
+            <span className="absolute left-2 top-2 rounded-md bg-action px-2 py-[3px] text-[11px] font-semibold text-action-text">Just saved</span>
+          ) : null}
+        </div>
       ) : (
         <div
           className={cx(
@@ -83,6 +91,7 @@ export function PinCard({ pin, people, isNew }: { pin: Pin; people: Array<User |
           ) : null}
         </div>
       )}
+      {pin.previewMediaId ? <span className="px-1 text-sm font-semibold leading-[1.3]">{pin.title}</span> : null}
       {pin.note ? (
         <span
           className={cx(
@@ -95,7 +104,7 @@ export function PinCard({ pin, people, isNew }: { pin: Pin; people: Array<User |
       ) : null}
       <span className="flex items-center gap-1.5 px-1 text-xs text-muted">
         {by ? <Avatar name={by.displayName} tint={by.personTint} size={18} /> : null}
-        {kindLabel[pin.kind]}
+        {pin.previewSite && pin.kind !== "idea" ? pin.previewSite : kindLabel[pin.kind]}
         {pin.status !== "saved" ? <span className={cx("ml-auto rounded-md px-2 py-[2px] font-semibold", st.cls)}>{st.label}</span> : null}
       </span>
     </Link>

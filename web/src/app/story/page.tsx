@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { Avatar, ButtonLink, ErrorText, Loading, Screen, cx } from "@/components/ui";
 import { api, errorMessage, photoUrl, type Memory } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
@@ -27,7 +28,7 @@ function dateStamp(m: Memory): string {
 
 // E0 · Our Story
 export default function Story() {
-  const { ready, people } = useSpace();
+  const { ready, people, readOnly, spaceName, me } = useSpace();
   const tick = useLiveTick(["memory."], ready);
   const [memories, setMemories] = useState<Memory[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -59,10 +60,14 @@ export default function Story() {
     <Screen className="gap-4 px-4 pb-[120px] pt-14">
       <div className="flex items-center justify-between">
         <h1 className="m-0 font-display text-[34px] font-normal leading-[1.05]">Our Story</h1>
-        <ButtonLink href="/story/new" className="min-h-11 w-auto px-3.5 text-sm">
-          Add a memory
-        </ButtonLink>
+        {readOnly ? null : (
+          <ButtonLink href="/story/new" className="min-h-11 w-auto px-3.5 text-sm">
+            Add a memory
+          </ButtonLink>
+        )}
       </div>
+
+      {readOnly ? <ReadOnlyBanner name={spaceName} until={me?.readOnlySpace?.until} /> : null}
 
       <div className="flex gap-1.5" role="radiogroup" aria-label="Filter">
         {([
@@ -96,9 +101,11 @@ export default function Story() {
           </div>
           <h2 className="m-0 font-display text-2xl font-normal">Your story starts with any photo.</h2>
           <p className="m-0 text-[15px] leading-[1.55] text-muted">It doesn’t have to be a good one. A screenshot counts.</p>
-          <ButtonLink href="/story/new" className="mt-1">
-            Add a memory
-          </ButtonLink>
+          {readOnly ? null : (
+            <ButtonLink href="/story/new" className="mt-1">
+              Add a memory
+            </ButtonLink>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-[22px_1fr] gap-x-3">
@@ -111,7 +118,7 @@ export default function Story() {
         </div>
       )}
 
-      <BottomNav current="story" />
+      <BottomNav current="story" readOnly={readOnly} />
     </Screen>
   );
 }

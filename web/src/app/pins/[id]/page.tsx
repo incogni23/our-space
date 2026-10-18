@@ -6,7 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { KindIcon } from "@/components/pin-card";
 import { Avatar, ErrorText, Frames, Loading, Screen, cx } from "@/components/ui";
-import { ago, api, errorMessage, type Pin, type PinNote, type PinStatus } from "@/lib/api";
+import { ago, api, errorMessage, photoUrl, type Pin, type PinNote, type PinStatus } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
 import { useLiveTick } from "@/lib/live";
 
@@ -21,7 +21,7 @@ const STATUSES: Array<{ id: PinStatus; label: string }> = [
 export default function PinDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { ready, me, people, partner } = useSpace();
+  const { ready, me, people, partner, readOnly } = useSpace();
   const tick = useLiveTick(["pin."], ready);
   const [pin, setPin] = useState<Pin | null>(null);
   const [notes, setNotes] = useState<PinNote[]>([]);
@@ -119,6 +119,18 @@ export default function PinDetail() {
         </div>
       ) : null}
 
+      {pin.previewMediaId ? (
+        // eslint-disable-next-line @next/next/no-img-element -- served by our API
+        <img src={photoUrl(pin.previewMediaId, "full")} alt="" className="max-h-[300px] w-full rounded-(--radius-card) object-cover" />
+      ) : null}
+      {pin.previewDescription ? (
+        <p className="m-0 text-sm leading-[1.5] text-muted">
+          {pin.previewDescription}
+          {pin.previewSite ? <span className="block pt-1 text-xs">{pin.previewSite}</span> : null}
+        </p>
+      ) : null}
+
+      {readOnly ? null : (
       <Link
         href={`/plans/new?pin=${pin.id}`}
         className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline"
@@ -129,6 +141,7 @@ export default function PinDetail() {
         </svg>
         Plan this
       </Link>
+      )}
 
       {pin.url ? (
         <a
@@ -156,6 +169,7 @@ export default function PinDetail() {
               role="radio"
               aria-checked={pin.status === s.id}
               onClick={() => setStatus(s.id)}
+              disabled={readOnly}
               className={cx(
                 "min-h-10 rounded-[9px] text-[13px] text-ink",
                 pin.status === s.id ? "bg-surface font-semibold shadow-[0_1px_2px_rgba(68,53,62,0.1)]" : "font-medium",
@@ -183,6 +197,7 @@ export default function PinDetail() {
             </div>
           );
         })}
+        {readOnly ? null : (
         <form onSubmit={send} className="flex gap-2">
           <label htmlFor="reply" className="sr-only">
             Add a line for {partner?.displayName || "them"}
@@ -206,15 +221,18 @@ export default function PinDetail() {
             </svg>
           </button>
         </form>
+        )}
       </section>
 
       <ErrorText>{error}</ErrorText>
 
-      <button type="button" onClick={remove} className="mt-2 min-h-11 self-center text-sm font-medium text-danger">
-        Remove from board
-      </button>
+      {readOnly ? null : (
+        <button type="button" onClick={remove} className="mt-2 min-h-11 self-center text-sm font-medium text-danger">
+          Remove from board
+        </button>
+      )}
 
-      <BottomNav current="boards" />
+      <BottomNav current="boards" readOnly={readOnly} />
     </Screen>
   );
 }

@@ -35,7 +35,7 @@ function Toggle({ id, checked, onChange, label, hint }: { id: string; checked: b
 function NewPlan() {
   const router = useRouter();
   const pinId = useSearchParams().get("pin");
-  const { ready, me, partner } = useSpace();
+  const { ready, me, partner } = useSpace({ write: true });
   const tz = me?.user.timeZone ?? "UTC";
   const [pin, setPin] = useState<Pin | null>(null);
   const [title, setTitle] = useState("");

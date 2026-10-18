@@ -23,7 +23,7 @@ const kindName = { link: "Link", place: "Place", song: "Song", idea: "Idea" } as
 // C1 · Save something for us
 export default function Add() {
   const router = useRouter();
-  const { ready, partner } = useSpace();
+  const { ready, partner } = useSpace({ write: true });
   const [boards, setBoards] = useState<Board[] | null>(null);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");

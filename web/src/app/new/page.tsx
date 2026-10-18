@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Card, ErrorText, Field, Lead, Loading, Screen, Title, TopBar, cx } from "@/components/ui";
@@ -55,6 +56,17 @@ export default function NewSpace() {
         <Title>Make a space.</Title>
         <Lead>Only the two of you will see these. You can change them together later.</Lead>
       </div>
+
+      {me.readOnlySpace ? (
+        <Card className="flex items-center justify-between gap-3">
+          <span className="text-sm leading-[1.45]">
+            <strong className="font-semibold">{me.readOnlySpace.name}</strong> is readable until {formatDay(me.readOnlySpace.until)}.
+          </span>
+          <Link href="/space" className="flex min-h-11 items-center text-sm font-medium">
+            Open
+          </Link>
+        </Card>
+      ) : null}
 
       {availableAt ? (
         <Card className="bg-time-wash">

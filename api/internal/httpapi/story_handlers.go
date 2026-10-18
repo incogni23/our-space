@@ -76,7 +76,7 @@ func (s *Server) handleUploadMedia(w http.ResponseWriter, r *http.Request) {
 
 // GET /media/{id}/{variant} — streams a photo to members of the space only.
 func (s *Server) handleGetMedia(w http.ResponseWriter, r *http.Request) {
-	sp, ok := s.space(w, r)
+	sp, ok := s.readSpace(w, r)
 	if !ok {
 		return
 	}
@@ -106,7 +106,7 @@ func (s *Server) handleGetMedia(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListMemories(w http.ResponseWriter, r *http.Request) {
-	sp, ok := s.space(w, r)
+	sp, ok := s.readSpace(w, r)
 	if !ok {
 		return
 	}
@@ -170,7 +170,7 @@ func (s *Server) handleCreateMemory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetMemory(w http.ResponseWriter, r *http.Request) {
-	sp, ok := s.space(w, r)
+	sp, ok := s.readSpace(w, r)
 	if !ok {
 		return
 	}

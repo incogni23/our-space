@@ -189,6 +189,14 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		out["space"] = toSpace(sp)
 	case errors.Is(err, pairing.ErrNotInSpace):
 		out["space"] = nil
+		if ro, err := s.boards.ResolveRead(r.Context(), uid); err == nil && ro.ReadOnly {
+			members, _ := store.New(s.pool).MembersOf(r.Context(), ro.ID)
+			ms := make([]memberJSON, 0, len(members))
+			for _, m := range members {
+				ms = append(ms, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone})
+			}
+			out["readOnlySpace"] = map[string]any{"id": ro.ID.String(), "name": ro.Name, "until": ro.ReadOnlyUntil, "members": ms}
+		}
 		avail, err := s.pairing.NewSpaceAvailableAt(r.Context(), uid)
 		if err != nil {
 			s.serverError(w, r, err)

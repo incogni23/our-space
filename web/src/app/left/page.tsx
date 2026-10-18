@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Button, ButtonLink, Card, Loading, Screen } from "@/components/ui";
-import { formatDay } from "@/lib/api";
+import { EXPORT_URL, formatDay } from "@/lib/api";
 
 // G3 · After leaving
 function Left() {
@@ -32,6 +32,12 @@ function Left() {
           <span className="text-sm leading-[1.5]">
             You can both still read and download what you shared. After that it’s deleted for both of you.
           </span>
+          <a href={EXPORT_URL} className="mt-2 flex min-h-[52px] items-center justify-center rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline">
+            Download a copy
+          </a>
+          <ButtonLink href="/space" variant="text">
+            Look back through it
+          </ButtonLink>
         </Card>
       ) : null}
 

@@ -12,6 +12,166 @@ import (
 	"github.com/google/uuid"
 )
 
+const allMemoriesWithMedia = `-- name: AllMemoriesWithMedia :many
+SELECT m.id, m.kind, m.title, m.caption, m.place, m.happened_on, m.ends_on, md.id AS media_id, md.key_full, mm.position
+FROM memories m
+LEFT JOIN memory_media mm ON mm.memory_id = m.id
+LEFT JOIN media md ON md.id = mm.media_id AND md.deleted_at IS NULL
+WHERE m.relationship_id = $1 AND m.deleted_at IS NULL
+ORDER BY m.happened_on, m.id, mm.position
+`
+
+type AllMemoriesWithMediaRow struct {
+	ID         uuid.UUID
+	Kind       string
+	Title      string
+	Caption    string
+	Place      string
+	HappenedOn time.Time
+	EndsOn     *time.Time
+	MediaID    *uuid.UUID
+	KeyFull    *string
+	Position   *int32
+}
+
+// For export: every memory and its photo keys.
+func (q *Queries) AllMemoriesWithMedia(ctx context.Context, relationshipID uuid.UUID) ([]AllMemoriesWithMediaRow, error) {
+	rows, err := q.db.Query(ctx, allMemoriesWithMedia, relationshipID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AllMemoriesWithMediaRow
+	for rows.Next() {
+		var i AllMemoriesWithMediaRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Title,
+			&i.Caption,
+			&i.Place,
+			&i.HappenedOn,
+			&i.EndsOn,
+			&i.MediaID,
+			&i.KeyFull,
+			&i.Position,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const allPins = `-- name: AllPins :many
+SELECT p.id, p.relationship_id, p.board_id, p.created_by, p.kind, p.title, p.url, p.note, p.status, p.created_at, p.updated_at, p.deleted_at, p.preview_status, p.preview_site, p.preview_description, p.preview_media_id, b.name AS board_name FROM pins p JOIN boards b ON b.id = p.board_id
+WHERE p.relationship_id = $1 AND p.deleted_at IS NULL ORDER BY b.name, p.created_at
+`
+
+type AllPinsRow struct {
+	ID                 uuid.UUID
+	RelationshipID     uuid.UUID
+	BoardID            uuid.UUID
+	CreatedBy          uuid.UUID
+	Kind               string
+	Title              string
+	Url                *string
+	Note               string
+	Status             string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          *time.Time
+	PreviewStatus      string
+	PreviewSite        string
+	PreviewDescription string
+	PreviewMediaID     *uuid.UUID
+	BoardName          string
+}
+
+func (q *Queries) AllPins(ctx context.Context, relationshipID uuid.UUID) ([]AllPinsRow, error) {
+	rows, err := q.db.Query(ctx, allPins, relationshipID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AllPinsRow
+	for rows.Next() {
+		var i AllPinsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RelationshipID,
+			&i.BoardID,
+			&i.CreatedBy,
+			&i.Kind,
+			&i.Title,
+			&i.Url,
+			&i.Note,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.PreviewStatus,
+			&i.PreviewSite,
+			&i.PreviewDescription,
+			&i.PreviewMediaID,
+			&i.BoardName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const allPlans = `-- name: AllPlans :many
+SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at FROM plans WHERE relationship_id = $1 ORDER BY starts_at
+`
+
+func (q *Queries) AllPlans(ctx context.Context, relationshipID uuid.UUID) ([]Plan, error) {
+	rows, err := q.db.Query(ctx, allPlans, relationshipID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Plan
+	for rows.Next() {
+		var i Plan
+		if err := rows.Scan(
+			&i.ID,
+			&i.RelationshipID,
+			&i.CreatedBy,
+			&i.PinID,
+			&i.Kind,
+			&i.Title,
+			&i.Place,
+			&i.Notes,
+			&i.StartsAt,
+			&i.AnchorTz,
+			&i.Repeat,
+			&i.Status,
+			&i.SuggestedStartsAt,
+			&i.SuggestedBy,
+			&i.RespondedBy,
+			&i.RespondedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const attachMedia = `-- name: AttachMedia :exec
 INSERT INTO memory_media (memory_id, media_id, position) VALUES ($1, $2, $3)
 `

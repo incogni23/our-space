@@ -19,7 +19,7 @@ const KINDS: Array<{ id: MemoryKind; label: string }> = [
 // Add a memory (feeds E0)
 export default function NewMemory() {
   const router = useRouter();
-  const { ready, me } = useSpace();
+  const { ready, me } = useSpace({ write: true });
   const fileRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<MemoryKind>("moment");
   const [photos, setPhotos] = useState<Photo[]>([]);

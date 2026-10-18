@@ -20,7 +20,7 @@ function longDate(d: string) {
 export default function MemoryDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const { ready, me, people } = useSpace();
+  const { ready, me, people, readOnly } = useSpace();
   const tick = useLiveTick(["memory."], ready);
   const [memory, setMemory] = useState<Memory | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +98,7 @@ export default function MemoryDetail() {
 
       <ErrorText>{error}</ErrorText>
 
-      {confirmDelete ? (
+      {readOnly ? null : confirmDelete ? (
         <div className="flex flex-col gap-2 rounded-(--radius-card) border border-line bg-surface p-3.5">
           <span className="text-sm">Remove this memory from Our Story for both of you?</span>
           <div className="grid grid-cols-2 gap-2">
@@ -116,7 +116,7 @@ export default function MemoryDetail() {
         </button>
       )}
 
-      <BottomNav current="story" />
+      <BottomNav current="story" readOnly={readOnly} />
     </Screen>
   );
 }

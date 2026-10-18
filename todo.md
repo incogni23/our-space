@@ -105,12 +105,12 @@ Onboarding UI (A1–A8)
 - [x] Settings (G1), Leave (G2), After leaving (G3), Day-one placeholder
 - [ ] A8 → H1 paywall hand-off (needs Phase 1b)
 
-## Phase 2 · The private space (weeks 3–4)  ← in progress
+## Phase 2 · The private space (weeks 3–4)  ✓ done
 
 - [x] Our Space home (B1): greeting, both clocks, "New from <partner>", bottom nav
 - [x] Time zone per person (detected on A4/A8)
 - [x] Boards & pins (C1–C3): save link/place/song/idea, first board auto-created, new board inline, visual/list views, filters, pin detail, status Saved/Planned/Done/Remembered, notes between you, remove + undo
-- [ ] Link previews (Open Graph unfurl worker, SSRF-safe) — cards are typographic until then
+- [x] Link previews: server-side Open Graph fetch with SSRF guard (public IPs on 80/443 only, checked at connect time, redirects re-checked, size/time limits); preview image re-encoded and stored like a photo so viewers never load third-party URLs
 - [ ] Awake hours (A8) + "both usually awake" overlap on B1
 - [x] Plans (D1–D3): plan from a pin (pin → planned), meet-up or call, both clocks with day labels, weekly repeat on the anchor zone's wall clock, DST notes, invite to confirm → accept / suggest another time / decline, edit, cancel, .ics export, month view, "Next together" on B1
 - [ ] Trips (partner's travel dates → "you're both in Bengaluru that day", countdown on B1)
@@ -119,12 +119,13 @@ Onboarding UI (A1–A8)
 - [ ] "A year ago this weekend" card on B1 · "Made" filter (Phase 4)
 - [x] Photo upload: server re-encodes every photo (orientation applied, GPS and all metadata removed, display copy + thumbnail), served only to members via the API; local folder or any S3-compatible store (MinIO/S3/R2)
 - [ ] Photo pins on boards · resumable uploads · video
-- [ ] Read-only access to an unlinked space until `read_only_until`
+- [x] Read-only access to a closed space until `read_only_until` (both former members); write actions hidden; "Download a copy" zip export (also in Settings)
+- [ ] Delete closed spaces' content after `read_only_until` (needs the job runner, Phase 3)
 - [x] Live updates: Server-Sent Events per space, fanned out through Postgres LISTEN/NOTIFY (multi-instance safe); boards, pins, notes, plans, memories, partner joined, space closed. Events carry what changed, never presence
 - [ ] WebSockets for Together sessions (Phase 5)
-- [ ] Offline outbox ("Waiting to send", never claims sent)
+- [ ] Offline outbox ("Waiting to send", never claims sent) → moved to Phase 5 with the PWA/service worker
 
-## Phase 3 · Notes & rituals (week 5)
+## Phase 3 · Notes & rituals (week 5)  ← next
 
 - [ ] Scheduled notes: recipient sees only who + when until open time; sender sees Scheduled → Delivered, never Opened
 - [ ] Durable job runner for reminders and note delivery

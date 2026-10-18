@@ -17,7 +17,7 @@ function BoardPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const saved = useSearchParams().get("saved");
-  const { ready, people } = useSpace();
+  const { ready, people, readOnly } = useSpace();
   const tick = useLiveTick(["board.", "pin."], ready);
   const [board, setBoard] = useState<Board | null>(null);
   const [pins, setPins] = useState<Pin[]>([]);
@@ -184,7 +184,7 @@ function BoardPage() {
         </div>
       ) : null}
 
-      <BottomNav current="boards" />
+      <BottomNav current="boards" readOnly={readOnly} />
     </Screen>
   );
 }
