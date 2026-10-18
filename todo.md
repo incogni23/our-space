@@ -28,7 +28,7 @@ Design tokens: `design/tokens.json`, `design/tokens.css` (v0.1, match canvas 4.1
 | Database | PostgreSQL 16 |
 | DB access | pgx v5 + sqlc |
 | Migrations | goose (SQL files in `db/migrations`) |
-| Real-time | WebSockets (presence, pin updates, plan changes) |
+| Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; WebSockets later for Together sessions |
 | Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) |
 | Media | S3-compatible object storage (MinIO locally) |
 | Calls | Managed WebRTC (later) |
@@ -120,7 +120,8 @@ Onboarding UI (A1–A8)
 - [x] Photo upload: server re-encodes every photo (orientation applied, GPS and all metadata removed, display copy + thumbnail), served only to members via the API; local folder or any S3-compatible store (MinIO/S3/R2)
 - [ ] Photo pins on boards · resumable uploads · video
 - [ ] Read-only access to an unlinked space until `read_only_until`
-- [ ] WebSocket hub: pin/plan updates (no presence outside Together, per 5.4)
+- [x] Live updates: Server-Sent Events per space, fanned out through Postgres LISTEN/NOTIFY (multi-instance safe); boards, pins, notes, plans, memories, partner joined, space closed. Events carry what changed, never presence
+- [ ] WebSockets for Together sessions (Phase 5)
 - [ ] Offline outbox ("Waiting to send", never claims sent)
 
 ## Phase 3 · Notes & rituals (week 5)

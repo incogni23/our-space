@@ -415,10 +415,12 @@ func (s *Server) handleAccept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := session(r).UserID
-	if _, err := s.pairing.Accept(r.Context(), uid, chi.URLParam(r, "token")); err != nil {
+	rel, err := s.pairing.Accept(r.Context(), uid, chi.URLParam(r, "token"))
+	if err != nil {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, rel.ID, "space.joined", rel.ID.String())
 	sp, err := s.pairing.CurrentSpace(r.Context(), uid)
 	if err != nil {
 		s.serverError(w, r, err)
@@ -501,6 +503,7 @@ func (s *Server) handleLeave(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, rel.ID, "space.closed", rel.ID.String())
 	out := map[string]any{"status": rel.Status, "readOnlyUntil": rel.ReadOnlyUntil}
 	if avail, err := s.pairing.NewSpaceAvailableAt(r.Context(), uid); err == nil && !avail.IsZero() {
 		out["newSpaceAvailableAt"] = avail

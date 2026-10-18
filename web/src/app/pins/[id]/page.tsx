@@ -8,6 +8,7 @@ import { KindIcon } from "@/components/pin-card";
 import { Avatar, ErrorText, Frames, Loading, Screen, cx } from "@/components/ui";
 import { ago, api, errorMessage, type Pin, type PinNote, type PinStatus } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 const STATUSES: Array<{ id: PinStatus; label: string }> = [
   { id: "saved", label: "Saved" },
@@ -21,6 +22,7 @@ export default function PinDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { ready, me, people, partner } = useSpace();
+  const tick = useLiveTick(["pin."], ready);
   const [pin, setPin] = useState<Pin | null>(null);
   const [notes, setNotes] = useState<PinNote[]>([]);
   const [reply, setReply] = useState("");
@@ -35,7 +37,7 @@ export default function PinDetail() {
         setNotes(r.notes);
       })
       .catch((e) => setError(errorMessage(e)));
-  }, [ready, id]);
+  }, [ready, id, tick]);
 
   async function setStatus(status: PinStatus) {
     if (!pin || pin.status === status) return;

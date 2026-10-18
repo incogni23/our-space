@@ -106,6 +106,8 @@ func run(log *slog.Logger) error {
 		TrustProxy:   env("TRUST_PROXY", "false") == "true",
 	}, log, pool, auth.NewService(pool, provider, []byte(pepper)), pairing.NewService(pool))
 
+	srv.Start(ctx)
+
 	httpSrv := &http.Server{
 		Addr:              env("ADDR", ":8080"),
 		Handler:           srv.Routes(),

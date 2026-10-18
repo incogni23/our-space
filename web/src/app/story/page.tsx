@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Avatar, ButtonLink, ErrorText, Loading, Screen, cx } from "@/components/ui";
 import { api, errorMessage, photoUrl, type Memory } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 type Filter = "all" | "trip" | "moment";
 
@@ -27,6 +28,7 @@ function dateStamp(m: Memory): string {
 // E0 · Our Story
 export default function Story() {
   const { ready, people } = useSpace();
+  const tick = useLiveTick(["memory."], ready);
   const [memories, setMemories] = useState<Memory[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function Story() {
     api<{ memories: Memory[] }>("/memories")
       .then((r) => setMemories(r.memories))
       .catch((e) => setError(errorMessage(e)));
-  }, [ready]);
+  }, [ready, tick]);
 
   if (!ready || (memories === null && !error)) return <Loading />;
 

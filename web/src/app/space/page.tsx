@@ -10,6 +10,7 @@ import { Avatar, ButtonLink, Frames, Loading, Screen } from "@/components/ui";
 import { api, cityOf, homeFor, partnerOf, timeIn, type Pin, type Plan } from "@/lib/api";
 import { fmt, theirTime, timeOnly } from "@/lib/time";
 import { useMe } from "@/lib/use-me";
+import { useLiveTick } from "@/lib/live";
 
 function greeting(tz: string): string {
   let h = new Date().getHours();
@@ -25,7 +26,7 @@ function greeting(tz: string): string {
 // B1 · Our Space. Plans ("Next together"), countdowns and memories join as their phases land.
 export default function OurSpace() {
   const router = useRouter();
-  const { me, loading } = useMe();
+  const { me, loading, reload } = useMe();
   const [newPins, setNewPins] = useState<Pin[] | null>(null);
   const [nextPlan, setNextPlan] = useState<{ plan: Plan; at: string } | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -34,6 +35,11 @@ export default function OurSpace() {
     if (me && me.space?.status !== "active") router.replace(homeFor(me));
   }, [me, router]);
 
+  const tick = useLiveTick(["pin.", "plan."], me?.space?.status === "active");
+  const spaceTick = useLiveTick(["space."], !!me?.space);
+  useEffect(() => {
+    if (spaceTick) void reload();
+  }, [spaceTick, reload]);
   useEffect(() => {
     if (me?.space?.status !== "active") return;
     api<{ newFromPartner: Pin[] }>("/space/home")
@@ -47,7 +53,7 @@ export default function OurSpace() {
         setNextPlan(occ[0] ?? null);
       })
       .catch(() => {});
-  }, [me]);
+  }, [me, tick]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);

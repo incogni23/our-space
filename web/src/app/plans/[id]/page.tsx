@@ -9,6 +9,7 @@ import { Button, ErrorText, Loading, Screen, cx } from "@/components/ui";
 import { api, cityOf, errorMessage, type Plan } from "@/lib/api";
 import { dayKey, dayLong, dayShort, daysUntil, fmt, icsFor, instantFor, relDay, theirTime, timeOnly } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 // D2 · Plan detail
 function PlanDetail() {
@@ -16,6 +17,7 @@ function PlanDetail() {
   const { id } = useParams<{ id: string }>();
   const created = useSearchParams().get("created");
   const { ready, me, partner } = useSpace();
+  const tick = useLiveTick(["plan."], ready);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [sDate, setSDate] = useState("");
@@ -31,7 +33,7 @@ function PlanDetail() {
     api<{ plan: Plan }>(`/plans/${id}`)
       .then((r) => setPlan(r.plan))
       .catch((e) => setError(errorMessage(e)));
-  }, [ready, id]);
+  }, [ready, id, tick]);
 
   useEffect(() => {
     if (created && plan) setToast(plan.status === "proposed" ? `Added to Plans. ${pName} will see it.` : "Added to Plans.");

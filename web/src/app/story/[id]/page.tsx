@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Avatar, ErrorText, Loading, Screen } from "@/components/ui";
 import { api, errorMessage, photoUrl, type Memory } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 const kindLabel = { moment: "Moment", trip: "Trip", change: "A change", start: "Where it started" } as const;
 
@@ -20,6 +21,7 @@ export default function MemoryDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { ready, me, people } = useSpace();
+  const tick = useLiveTick(["memory."], ready);
   const [memory, setMemory] = useState<Memory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -29,7 +31,7 @@ export default function MemoryDetail() {
     api<{ memory: Memory }>(`/memories/${id}`)
       .then((r) => setMemory(r.memory))
       .catch((e) => setError(errorMessage(e)));
-  }, [ready, id]);
+  }, [ready, id, tick]);
 
   async function remove() {
     try {

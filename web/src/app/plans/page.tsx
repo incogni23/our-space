@@ -7,12 +7,14 @@ import { ButtonLink, ErrorText, Loading, Screen, Title, cx } from "@/components/
 import { api, errorMessage, type Plan } from "@/lib/api";
 import { dayKey, fmt } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
+import { useLiveTick } from "@/lib/live";
 
 type Occ = { plan: Plan; at: string };
 
 // D3 · Plans: Coming up, and a month view.
 export default function Plans() {
   const { ready, me, partner } = useSpace();
+  const tick = useLiveTick(["plan."], ready);
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [view, setView] = useState<"up" | "month">("up");
   const [monthOffset, setMonthOffset] = useState(0);
@@ -23,7 +25,7 @@ export default function Plans() {
     api<{ plans: Plan[] }>("/plans")
       .then((r) => setPlans(r.plans))
       .catch((e) => setError(errorMessage(e)));
-  }, [ready]);
+  }, [ready, tick]);
 
   const tz = me?.user.timeZone ?? "UTC";
 

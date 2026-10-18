@@ -162,6 +162,7 @@ func (s *Server) handleCreateMemory(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "memory.created", m.ID.String())
 	writeJSON(w, http.StatusCreated, map[string]any{"memory": memoryJSON{
 		ID: m.ID.String(), CreatedBy: m.CreatedBy.String(), Kind: m.Kind, Title: m.Title, Caption: m.Caption, Place: m.Place,
 		HappenedOn: dateStr(m.HappenedOn), EndsOn: dateStrPtr(m.EndsOn), PhotoCount: int32(len(ids)), CreatedAt: m.CreatedAt,
@@ -206,5 +207,6 @@ func (s *Server) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "memory.deleted", id.String())
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -20,6 +20,7 @@ import (
 
 	"betweenus/api/internal/auth"
 	"betweenus/api/internal/boards"
+	"betweenus/api/internal/live"
 	"betweenus/api/internal/media"
 	"betweenus/api/internal/pairing"
 	"betweenus/api/internal/plans"
@@ -53,12 +54,16 @@ type Server struct {
 	plans   *plans.Service
 	media   *media.Service
 	story   *story.Service
+	live    *live.Hub
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
 	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool),
-		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool)}
+		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log)}
 }
+
+// Start runs background work (the live-event listener) until ctx ends.
+func (s *Server) Start(ctx context.Context) { go s.live.Run(ctx) }
 
 func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
@@ -90,6 +95,7 @@ func (s *Server) Routes() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.withSession(false))
 			r.Get("/me", s.handleMe)
+			r.Get("/live", s.handleLive)
 			r.Patch("/me", s.handleUpdateProfile)
 			r.Post("/me/recovery-codes", s.handleRecoveryCodes)
 			r.Post("/me/phone/start", s.handlePhoneStart)

@@ -103,6 +103,7 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "board.created", b.ID.String())
 	writeJSON(w, http.StatusCreated, map[string]any{"board": boardJSON{ID: b.ID.String(), Name: b.Name, CreatedBy: b.CreatedBy.String(), CreatedAt: b.CreatedAt}})
 }
 
@@ -162,6 +163,7 @@ func (s *Server) handleCreatePin(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "pin.created", p.ID.String())
 	writeJSON(w, http.StatusCreated, map[string]any{"pin": toPin(p, "")})
 }
 
@@ -231,6 +233,7 @@ func (s *Server) handleUpdatePin(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "pin.updated", p.ID.String())
 	writeJSON(w, http.StatusOK, map[string]any{"pin": toPin(p, "")})
 }
 
@@ -247,6 +250,7 @@ func (s *Server) handleDeletePin(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "pin.deleted", id.String())
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -267,6 +271,7 @@ func (s *Server) handleRestorePin(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "pin.created", id.String())
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -290,6 +295,7 @@ func (s *Server) handleAddPinNote(w http.ResponseWriter, r *http.Request) {
 		s.domainError(w, r, err)
 		return
 	}
+	s.publish(r, sp.ID, "pin.note", id.String())
 	writeJSON(w, http.StatusCreated, map[string]any{"note": map[string]any{
 		"id": n.ID.String(), "authorId": n.AuthorID.String(), "body": n.Body, "createdAt": n.CreatedAt,
 	}})
