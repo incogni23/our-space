@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { photoUrl, type Member, type Pin, type User } from "@/lib/api";
-import { Avatar, cx } from "./ui";
+import { inkColor } from "@/lib/theme";
+import { StatusStamp } from "./print";
+import { cx } from "./ui";
 
 const kindLabel = { link: "Link", place: "Place", song: "Song", idea: "Idea" } as const;
 
@@ -46,67 +48,71 @@ function KindIcon({ kind, size = 18 }: { kind: Pin["kind"]; size?: number }) {
 
 export { KindIcon };
 
+function hash(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+const stampText = { saved: "", planned: "Planned", done: "Done", remembered: "Remembered" } as const;
+
 /**
- * A pin on a board. No fake imagery: link previews arrive with the unfurl worker,
- * so cards are typographic, tinted by kind.
+ * A pin on a board, v2 scrapbook: photos as taped black-and-white polaroids,
+ * ideas as petal notes in the writer's hand, links as typed cards. Each person's
+ * words are in their own ink. One sticker per card at most.
  */
 export function PinCard({ pin, people, isNew }: { pin: Pin; people: Array<User | Member>; isNew?: boolean }) {
   const by = people.find((p) => p.id === pin.createdBy);
-  const st = statusStyle[pin.status];
+  const mine = by?.id === people[0]?.id;
+  const ink = inkColor(by?.ink ?? (mine ? "accent" : "second"));
+  const h = hash(pin.id);
+  const rot = ((h % 9) - 4) * 0.6; // -2.4..2.4deg
+  const tapeRot = (h % 2 ? 1 : -1) * (3 + (h % 6));
+  const tone = mine ? "petal" : "tape";
+  const shadow = "shadow-[0_14px_24px_-14px_rgba(0,0,0,0.55)]";
   return (
-    <Link
-      href={`/pins/${pin.id}`}
-      className={cx(
-        "flex flex-col gap-[7px] rounded-(--radius-card) text-ink no-underline",
-        isNew && "shadow-(--ring-new) pb-1.5",
-      )}
-    >
+    <Link href={`/pins/${pin.id}`} className="relative flex flex-col gap-1.5 text-ink no-underline" style={{ transform: `rotate(${rot}deg)` }}>
       {pin.kind === "idea" ? (
-        <div className="flex flex-col gap-2 rounded-(--radius-note) border border-line bg-surface p-3.5">
-          <span className="font-display text-lg leading-[1.3]">{pin.title}</span>
+        <div className={cx("relative bg-petal px-3.5 pb-[18px] pt-4 [clip-path:polygon(0_0,100%_0,100%_86%,88%_100%,0_100%)]", shadow)}>
+          <span className="break-words font-hand text-[26px] leading-[1.05] text-ink">{pin.title}</span>
         </div>
       ) : pin.previewMediaId ? (
-        <div className="relative overflow-hidden rounded-(--radius-pin) bg-sunken">
+        <div className={cx("relative bg-paper p-1.5 pb-2", shadow)}>
           {/* eslint-disable-next-line @next/next/no-img-element -- served by our API */}
-          <img src={photoUrl(pin.previewMediaId)} alt="" className="block max-h-[220px] w-full object-cover" loading="lazy" />
+          <img src={photoUrl(pin.previewMediaId)} alt="" className="bw block max-h-[220px] w-full object-cover" loading="lazy" />
           {isNew ? (
-            <span className="absolute left-2 top-2 rounded-md bg-action px-2 py-[3px] text-[11px] font-semibold text-action-text">Just saved</span>
+            <span className="absolute -left-1.5 top-3 -rotate-6 bg-accent px-2 py-1 font-type text-[10px] font-bold tracking-[0.12em] text-on-accent">JUST SAVED</span>
           ) : null}
         </div>
       ) : (
-        <div
-          className={cx(
-            "relative flex min-h-[120px] flex-col justify-end gap-1 overflow-hidden rounded-(--radius-pin) p-3",
-            pin.kind === "place" && "bg-terracotta-wash text-terracotta-ink",
-            pin.kind === "song" && "bg-mauve-wash text-mauve-ink",
-            pin.kind === "link" && "border border-line bg-surface text-muted",
-          )}
-        >
-          <KindIcon kind={pin.kind} />
-          <span className="break-words font-display text-[17px] leading-[1.15] text-ink">{pin.title}</span>
+        <div className={cx("relative flex flex-col gap-2 rounded-[4px] border-[1.5px] border-ink bg-paper p-3", shadow)}>
+          <span className="flex items-center gap-1.5 font-type text-[10px] uppercase tracking-[0.14em] text-muted">
+            <KindIcon kind={pin.kind} size={13} />
+            {kindLabel[pin.kind]}
+            {pin.previewSite ? ` · ${pin.previewSite}` : ""}
+          </span>
+          <span className="break-words font-display text-[21px] font-bold leading-[1.05]">{pin.title}</span>
+          {pin.previewDescription ? <span className="line-clamp-3 font-type text-xs leading-normal">{pin.previewDescription}</span> : null}
           {isNew ? (
-            <span className="absolute left-2 top-2 rounded-md bg-action px-2 py-[3px] text-[11px] font-semibold text-action-text">
-              Just saved
-            </span>
+            <span className="absolute -left-1.5 -top-2 -rotate-6 bg-accent px-2 py-1 font-type text-[10px] font-bold tracking-[0.12em] text-on-accent">JUST SAVED</span>
           ) : null}
         </div>
       )}
-      {pin.previewMediaId ? <span className="px-1 text-sm font-semibold leading-[1.3]">{pin.title}</span> : null}
+      {pin.kind !== "idea" && pin.previewMediaId ? (
+        <span aria-hidden="true" className={cx("washi absolute left-1/2 -top-[9px] -ml-8 h-5 w-16", tone === "petal" ? "bg-petal" : "bg-tape")} style={{ transform: `rotate(${tapeRot}deg)` }} />
+      ) : null}
+      {pin.kind === "idea" || !pin.previewMediaId ? null : (
+        <span className="px-0.5 font-display text-base font-bold leading-[1.1]">{pin.title}</span>
+      )}
       {pin.note ? (
-        <span
-          className={cx(
-            "mx-1 border-l-2 pl-2 font-display text-sm italic leading-[1.35]",
-            by?.personTint === "sage" ? "border-sage" : by?.personTint === "mauve" ? "border-mauve" : "border-terracotta",
-          )}
-        >
+        <span className="px-0.5 font-hand text-[19px] leading-[1.05]" style={{ color: ink }}>
           {pin.note}
         </span>
       ) : null}
-      <span className="flex items-center gap-1.5 px-1 text-xs text-muted">
-        {by ? <Avatar name={by.displayName} tint={by.personTint} size={18} /> : null}
-        {pin.previewSite && pin.kind !== "idea" ? pin.previewSite : kindLabel[pin.kind]}
-        {pin.status !== "saved" ? <span className={cx("ml-auto rounded-md px-2 py-[2px] font-semibold", st.cls)}>{st.label}</span> : null}
-      </span>
+      {pin.status !== "saved" ? (
+        <StatusStamp color={pin.status === "planned" ? "var(--accent-ink)" : "var(--text)"}>{stampText[pin.status]}</StatusStamp>
+      ) : null}
+      <span className="sr-only">Saved by {mine ? "you" : by?.displayName}</span>
     </Link>
   );
 }

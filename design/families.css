@@ -1,0 +1,65 @@
+/* Between Us v2 · colour families
+   Set on the root: <html data-family="cherry">. One family per space,
+   stored as relationships.palette; either partner can change it.
+   Each person also stores users.ink: accent | second | ink | pencil.
+   Photos stay black and white in the UI; only these tokens change. */
+
+:root,
+[data-family="cherry"] {
+  --ground: #FCE4EA;    /* page background */
+  --paper: #FFFDF9;     /* polaroids, cards, sheets */
+  --petal: #F9C9D6;     /* tape, envelopes, chips (decor, never text) */
+  --tape: #FFE9A8;      /* second tape colour (decor) */
+  --accent: #E0244A;    /* hearts, stamps, + button, big italic words */
+  --accent-ink: #C0163A;/* accent as body text, seals, your ink */
+  --second: #23476E;    /* partner ink */
+  --text: #151112;
+  --muted: #5E5658;
+  --nav: #151112;
+  --nav-text: #FFFDF9;
+  --on-accent: #FFFDF9;
+}
+[data-family="lavender"] {
+  --ground: #ECE6F7; --paper: #FFFDF9; --petal: #D9CCF2; --tape: #FFE9A8;
+  --accent: #7C4DDB; --accent-ink: #5B34B5; --second: #A3264F;
+  --text: #151112; --muted: #5E5658; --nav: #151112; --nav-text: #FFFDF9; --on-accent: #FFFDF9;
+}
+[data-family="matcha"] {
+  --ground: #E8F0DF; --paper: #FFFDF9; --petal: #CFE3BE; --tape: #FFE9A8;
+  --accent: #288445; --accent-ink: #1F6B3A; --second: #B5452B;
+  --text: #151112; --muted: #55594F; --nav: #151112; --nav-text: #FFFDF9; --on-accent: #FFFDF9;
+}
+[data-family="ocean"] {
+  --ground: #DDEEFA; --paper: #FFFDF9; --petal: #BFD9F2; --tape: #FFE9A8;
+  --accent: #1E6FD9; --accent-ink: #1A56A8; --second: #C0163A;
+  --text: #151112; --muted: #4F5864; --nav: #151112; --nav-text: #FFFDF9; --on-accent: #FFFDF9;
+}
+[data-family="peach"] {
+  --ground: #FFE8DA; --paper: #FFFDF9; --petal: #FFCBAE; --tape: #FFF1B8;
+  --accent: #D04316; --accent-ink: #B83A0E; --second: #23476E;
+  --text: #151112; --muted: #5E5658; --nav: #151112; --nav-text: #FFFDF9; --on-accent: #FFFDF9;
+}
+[data-family="midnight"] {
+  color-scheme: dark;
+  --ground: #1C1719; --paper: #26201F; --petal: #3A2F33; --tape: #5A4A50;
+  --accent: #FF6FA0; --accent-ink: #FF8FB5; --second: #9FC6FF;
+  --text: #FFF6F0; --muted: #C9BDBF; --nav: #FFF6F0; --nav-text: #1C1719; --on-accent: #1C1719;
+}
+
+/* Handwriting ink chosen per person */
+[data-ink="accent"] { --my-ink: var(--accent-ink); }
+[data-ink="second"] { --my-ink: var(--second); }
+[data-ink="ink"]    { --my-ink: var(--text); }
+[data-ink="pencil"] { --my-ink: var(--muted); }
+
+/* Type */
+:root {
+  --font-display: 'Bodoni Moda', Didot, Georgia, serif;   /* names, dates, countdowns */
+  --font-hand: 'Caveat', cursive;                          /* only words a person wrote */
+  --font-type: 'Courier Prime', ui-monospace, monospace;   /* letters, stamps */
+  --font-ui: 'DM Sans', system-ui, sans-serif;             /* anything you tap */
+}
+
+/* Family change: crossfade, never a flash */
+html { transition: background-color 420ms cubic-bezier(.16,1,.3,1), color 420ms cubic-bezier(.16,1,.3,1); }
+@media (prefers-reduced-motion: reduce) { html { transition: none; } }

@@ -6,13 +6,25 @@ import { useEffect, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
 import { opensLabel } from "@/components/note-letter";
 import { NoteForm, toPayload, type NoteDraft } from "@/components/note-form";
-import { ErrorText, Loading, Screen } from "@/components/ui";
-import { api, errorMessage, type Note } from "@/lib/api";
+import { Kicker, StatusStamp } from "@/components/print";
+import { Button, ButtonLink, ErrorText, Heart, Loading, Screen, cx } from "@/components/ui";
+import { api, cityOf, errorMessage, type Note } from "@/lib/api";
+import { issueNoFor } from "@/lib/issue";
+import { inkColor } from "@/lib/theme";
 import { useLiveTick } from "@/lib/live";
-import { dayLong, dayKey, timeOnly, toInputs } from "@/lib/time";
+import { dayLong, dayKey, fmt, timeOnly, toInputs } from "@/lib/time";
 import { useSpace } from "@/lib/use-space";
 
-// One note: sealed envelope, letter, or (for its writer, before delivery) the editor.
+function hourIn(tz: string): number {
+  try {
+    return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
+  } catch {
+    return new Date().getHours();
+  }
+}
+
+// One note, v2: sealed envelope (tap the heart seal), the letter, or (for its
+// writer, before delivery) the editor.
 export default function NoteDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -21,6 +33,7 @@ export default function NoteDetail() {
   const [note, setNote] = useState<Note | null>(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -106,31 +119,108 @@ export default function NoteDetail() {
     );
   }
 
-  return (
-    <Screen className="gap-5 px-4 pb-[120px] pt-[52px]">
-      {back}
+  async function breakSeal() {
+    setOpening(true);
+    try {
+      const r = await api<{ note: Note }>(`/notes/${id}/open`, { body: {} });
+      setNote(r.note);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setOpening(false);
+    }
+  }
 
-      {note.state === "waiting" ? (
-        <div className="flex flex-col items-center gap-5 pt-6 text-center">
-          <div className="relative h-[180px] w-full max-w-[300px]" aria-hidden="true">
-            <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
-            <span className="absolute inset-x-0 top-0 h-24 bg-shared-flap [clip-path:polygon(0_0,100%_0,50%_100%)]" />
+  const author = note.mine ? me.user : partner;
+  const authorInk = inkColor(author?.ink ?? (note.mine ? me.user.ink : "second"));
+  const authorTz = note.mine ? myTz : pTz;
+  const writtenAt = note.deliveredAt ?? note.deliverAt ?? note.createdAt;
+  const sealed = note.state === "waiting" || (!note.mine && note.state === "delivered" && note.opened === false);
+  const issueNo = issueNoFor(me.space?.activatedAt, writtenAt);
+
+  return (
+    <Screen className="gap-4 px-4 pb-[120px] pt-[50px]">
+      <div className="flex items-center justify-between">
+        <Link href="/notes" aria-label="Back to notes" className="-ml-2.5 flex size-11 items-center justify-center text-ink">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </Link>
+        <span className="font-type text-[11px] tracking-[0.16em] text-muted">LITTLE THINGS{me.space ? ` · Nº ${issueNo}` : ""}</span>
+        <span className="w-[34px]" />
+      </div>
+
+      {sealed ? (
+        <div className="flex flex-col items-center gap-[22px] pt-[30px] text-center">
+          <h1 className="m-0 font-display text-[40px] font-black italic leading-none">
+            {note.state === "waiting" ? "Something’s coming." : "You’ve got mail."}
+          </h1>
+          <div className="relative h-[220px] w-full max-w-[320px]">
+            <div className="absolute inset-0 rounded-md bg-petal shadow-[0_26px_40px_-22px_rgba(0,0,0,0.55)]" />
+            <div className="washi absolute inset-x-0 bottom-0 h-[120px] bg-paper opacity-45" />
+            <div className="washi absolute inset-x-0 top-0 h-32 rounded-t-md bg-paper opacity-75" />
+            <span className="absolute bottom-4 left-[18px] text-left font-type text-[11px] uppercase leading-[1.6] tracking-[0.12em]">
+              To: {me.user.displayName || "you"}, {cityOf(myTz)}
+              <br />
+              From: {pName}, {cityOf(pTz)}
+            </span>
+            <span className="absolute right-4 top-3.5 flex h-16 w-[54px] rotate-4 items-center justify-center rounded border-2 border-dashed border-accent-ink font-display text-xl font-bold italic text-accent-ink">
+              xo
+            </span>
+            {note.state === "waiting" ? (
+              <span className="absolute left-1/2 top-24 -ml-9 flex size-[72px] items-center justify-center rounded-full bg-accent-ink opacity-70 shadow-[0_6px_12px_rgba(0,0,0,0.3)]" aria-hidden="true">
+                <Heart size={32} color="var(--on-accent)" />
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={breakSeal}
+                disabled={opening}
+                aria-label={`Break the seal and open ${pName}’s letter`}
+                className="absolute left-1/2 top-24 -ml-9 flex size-[72px] cursor-pointer items-center justify-center rounded-full bg-accent-ink shadow-[0_6px_12px_rgba(0,0,0,0.3),inset_0_0_0_5px_rgba(255,255,255,0.12)] transition-transform duration-(--dur-base) active:scale-90 disabled:opacity-70"
+              >
+                <Heart size={32} color="var(--on-accent)" />
+              </button>
+            )}
           </div>
-          <h1 className="m-0 font-display text-[28px] font-normal leading-[1.15]">A note from {pName} is waiting.</h1>
-          <p className="m-0 text-[15px] leading-[1.55] text-muted">Opens {opensLabel(note.deliverAt!, myTz)}, your time. Only who and when are shown until then.</p>
+          {note.state === "waiting" ? (
+            <>
+              <span className="-rotate-3 font-hand text-[28px] text-accent-ink">opens {opensLabel(note.deliverAt!, myTz)} ♡</span>
+              <span className="font-type text-[11px] uppercase tracking-[0.12em] text-muted">Only who and when, until then</span>
+            </>
+          ) : (
+            <>
+              <span className="-rotate-3 font-hand text-[30px] text-accent-ink">tap the heart to open ♡</span>
+              <span className="font-type text-[11px] uppercase tracking-[0.12em] text-muted">
+                Sent {fmt(writtenAt, myTz, { weekday: "short", day: "numeric", month: "short" })} · {timeOnly(writtenAt, pTz)} {pTz === myTz ? "" : "their time"}
+              </span>
+              <span className="text-xs text-muted">{pName} will see when you opened it.</span>
+            </>
+          )}
         </div>
       ) : (
-        <article className="relative">
-          <span className="absolute inset-[8px_-4px_-6px_6px] rotate-[1.5deg] rounded-(--radius-note) bg-shared-wash" aria-hidden="true" />
-          <div className={`relative flex min-h-[260px] flex-col gap-4 rounded-(--radius-note) bg-surface p-5 shadow-(--shadow-paper) ${note.state === "draft" ? "border-[1.5px] border-dashed border-line-control" : ""}`}>
-            <p className="m-0 whitespace-pre-wrap font-display text-[21px] italic leading-[1.5]">{note.body}</p>
-            <span className="mt-auto font-stamp text-[10px] uppercase tracking-[0.08em] text-muted">
-              {note.state === "draft" && "Draft · only you can see this"}
-              {note.state === "scheduled" &&
-                `Sends ${opensLabel(note.deliverAt!, note.deliverTz === pTz ? pTz : myTz)} ${note.deliverTz === pTz && pTz !== myTz ? `${pName}’s time` : "your time"}`}
-              {note.state === "delivered" && (note.mine ? `Delivered ${dayLong(note.deliveredAt!, myTz)}` : `From ${pName} · ${dayLong(note.deliveredAt!, myTz)}`)}
-            </span>
-          </div>
+        <article
+          className={cx(
+            "lined relative -rotate-1 bg-paper px-[22px] pb-[30px] pt-[26px] shadow-[0_26px_40px_-22px_rgba(0,0,0,0.5)]",
+            note.state === "draft" && "outline-[1.5px] outline-dashed outline-line-control",
+          )}
+        >
+          <span className="washi absolute -top-3.5 right-3.5 flex size-[46px] rotate-[14deg] items-center justify-center rounded-full bg-accent-ink" aria-hidden="true">
+            <Heart size={20} color="var(--on-accent)" />
+          </span>
+          <span className="mb-4 block font-type text-[10.5px] uppercase tracking-[0.14em] text-muted">
+            {fmt(writtenAt, authorTz, { weekday: "short", day: "numeric", month: "short" })} · {timeOnly(writtenAt, authorTz)} · {cityOf(authorTz)}
+          </span>
+          <p className="m-0 whitespace-pre-wrap font-type text-[15px] leading-[1.65]">{note.body}</p>
+          <span className="mt-3.5 block -rotate-3 font-hand text-[34px]" style={{ color: authorInk }}>
+            — {author?.displayName || pName}
+          </span>
+          <span className="mt-1 block font-type text-[10px] uppercase tracking-[0.1em] text-muted">
+            {note.state === "draft" && "Draft · only you can see this"}
+            {note.state === "scheduled" &&
+              `Sends ${opensLabel(note.deliverAt!, note.deliverTz === pTz ? pTz : myTz)} ${note.deliverTz === pTz && pTz !== myTz ? `${pName}’s time` : "your time"}`}
+            {note.state === "delivered" && (note.mine ? `Delivered ${dayLong(note.deliveredAt!, myTz)}` : `From ${pName} · ${dayLong(note.deliveredAt!, myTz)}`)}
+          </span>
         </article>
       )}
 
@@ -138,9 +228,9 @@ export default function NoteDetail() {
 
       {!readOnly && note.mine && note.state !== "delivered" ? (
         <div className="flex flex-col gap-2">
-          <button type="button" onClick={() => setEditing(true)} className="min-h-12 rounded-(--radius-control) border border-line bg-surface text-[15px] font-medium text-ink">
+          <Button variant="secondary" onClick={() => setEditing(true)} className="min-h-[50px] text-[15px]">
             {note.state === "draft" ? "Edit or send" : "Edit"}
-          </button>
+          </Button>
           <button type="button" onClick={remove} className="min-h-11 text-[15px] font-medium text-danger">
             Take it back
           </button>
@@ -148,64 +238,77 @@ export default function NoteDetail() {
       ) : null}
 
       {note.mine && note.state === "delivered" ? (
-        <div className="flex items-center gap-2.5 rounded-(--radius-card) border border-line bg-surface px-3.5 py-3 text-sm">
+        <div className="flex items-center gap-2.5 border-y border-ink py-3 text-sm">
           {note.readAt ? (
             <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--status-ok-ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12.5l4.5 4.5L19 7" />
-              </svg>
+              <StatusStamp>Read</StatusStamp>
               <span>
-                <strong className="font-semibold">Read</strong> {dayLong(note.readAt, myTz)}, {timeOnly(note.readAt, myTz)}
+                {dayLong(note.readAt, myTz)}, {timeOnly(note.readAt, myTz)}
+                {pTz !== myTz ? <span className="text-muted"> · {timeOnly(note.readAt, pTz)} for {pName}</span> : null}
               </span>
             </>
           ) : (
-            <span className="text-muted">Delivered. {pName} hasn’t opened it yet.</span>
+            <>
+              <StatusStamp color="var(--muted)">Delivered</StatusStamp>
+              <span className="text-muted">{pName} hasn’t broken the seal yet.</span>
+            </>
           )}
         </div>
       ) : null}
 
-      {!note.mine && note.state === "delivered" ? (
-        <p className="m-0 text-center text-xs text-muted">{pName} can see when you read this.</p>
+      {!note.mine && note.state === "delivered" && !sealed ? (
+        <div className="flex flex-col gap-2">
+          {!readOnly ? (
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => keep(!note.kept)} aria-pressed={!!note.kept} className="min-h-[50px] text-sm">
+                {note.kept ? "Kept in Our Story ♡" : "Keep in Our Story"}
+              </Button>
+            </div>
+          ) : null}
+          {!readOnly ? (
+            <ButtonLink href="/notes/new" className="min-h-[54px]">
+              Write back{pTz !== myTz ? `, for ${pName}’s ${hourIn(pTz) < 12 ? "morning" : hourIn(pTz) < 17 ? "afternoon" : "evening"}` : ""}
+            </ButtonLink>
+          ) : null}
+          <span className="text-center text-xs text-muted">
+            {pName} can see when you opened it. {!readOnly ? (
+              <button type="button" onClick={remove} className="font-medium text-danger underline underline-offset-2">
+                Delete
+              </button>
+            ) : null}
+          </span>
+        </div>
       ) : null}
 
       {note.mine && (note.state === "scheduled" || note.state === "delivered") ? (
-        <section aria-labelledby="theirview" className="flex flex-col gap-2.5 border-t border-line pt-4">
-          <h2 id="theirview" className="m-0 font-stamp text-[10px] uppercase tracking-[0.1em] text-muted">
-            What {pName} sees
-          </h2>
+        <section aria-labelledby="theirview" className="flex flex-col gap-2.5 pt-2">
+          <Kicker id="theirview">What {pName} sees</Kicker>
           {note.state === "scheduled" ? (
             <div className="flex items-center gap-3.5">
-              <span className="relative h-16 w-24 flex-none" aria-hidden="true">
-                <span className="absolute inset-0 rounded-(--radius-note) bg-shared-wash" />
-                <span className="absolute inset-x-0 top-0 h-9 bg-shared-flap [clip-path:polygon(0_0,100%_0,50%_100%)]" />
+              <span className="relative h-16 w-24 flex-none rounded bg-petal" aria-hidden="true">
+                <span className="washi absolute inset-x-0 top-0 h-9 bg-paper opacity-75" />
+                <span className="absolute left-1/2 top-6 -ml-3 flex size-6 items-center justify-center rounded-full bg-accent-ink">
+                  <Heart size={12} color="var(--on-accent)" />
+                </span>
               </span>
               <span className="text-sm leading-[1.45]">
-                “A note from {me.user.displayName || "you"} is waiting. Opens {opensLabel(note.deliverAt!, pTz)}.” Only who and when, until then.
+                A sealed envelope from {me.user.displayName || "you"}: “opens {opensLabel(note.deliverAt!, pTz)}”. Only who and when, until then.
               </span>
             </div>
           ) : (
-            <div className="relative">
-              <div className="flex flex-col gap-2 rounded-(--radius-note) bg-surface p-3.5 shadow-(--shadow-paper)">
-                <span className="line-clamp-3 font-display text-base italic leading-[1.4]">{note.body}</span>
-                <span className="font-stamp text-[10px] uppercase tracking-[0.08em] text-muted">
-                  From {me.user.displayName || "you"} · {dayLong(note.deliveredAt!, pTz)}
+            <div className="flex items-center gap-3.5">
+              <span className="relative h-16 w-24 flex-none rounded bg-petal" aria-hidden="true">
+                <span className="washi absolute inset-x-0 top-0 h-9 bg-paper opacity-75" />
+                <span className="absolute left-1/2 top-6 -ml-3 flex size-6 items-center justify-center rounded-full bg-accent-ink">
+                  <Heart size={12} color="var(--on-accent)" />
                 </span>
-              </div>
-              <span className="mt-1.5 block text-xs text-muted">With “{me.user.displayName || "You"} can see when you read this.”</span>
+              </span>
+              <span className="text-sm leading-[1.45]">
+                “You’ve got mail.” They tap the heart seal to open it, and that’s the moment you see as Read.
+              </span>
             </div>
           )}
         </section>
-      ) : null}
-
-      {!readOnly && !note.mine && note.state === "delivered" ? (
-        <div className="flex flex-col gap-2">
-          <button type="button" onClick={() => keep(!note.kept)} aria-pressed={!!note.kept} className="min-h-12 rounded-(--radius-control) border border-line bg-surface text-[15px] font-medium text-ink">
-            {note.kept ? "Kept · tap to unkeep" : "Keep this one"}
-          </button>
-          <button type="button" onClick={remove} className="min-h-11 text-[15px] font-medium text-danger">
-            Delete
-          </button>
-        </div>
       ) : null}
 
       <BottomNav current="space" readOnly={readOnly} />

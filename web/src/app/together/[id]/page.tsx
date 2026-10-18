@@ -131,7 +131,7 @@ export default function TogetherRoom() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">{s.title}</h1>
+          <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">{s.title}</h1>
           {s.url ? (
             <a href={s.url} target="_blank" rel="noopener noreferrer" className="self-start text-sm font-medium text-[#DDA09D]">
               Open it in its own app →

@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearOutbox } from "@/lib/outbox";
 import { forgetThisDevice, pushState, turnOffPush, turnOnPush, type PushState } from "@/lib/push";
-import { Button, Card, ErrorText, Frames, Loading, Screen, Stamp } from "@/components/ui";
+import { Button, Card, ErrorText, Heart, Loading, Screen, Stamp } from "@/components/ui";
 import { EXPORT_URL, api, errorMessage, homeFor, partnerOf } from "@/lib/api";
 import { useMe } from "@/lib/use-me";
+import { familyName, resetTheme } from "@/lib/theme";
 
 const chevron = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -62,6 +63,7 @@ export default function Settings() {
     await forgetThisDevice();
     clearOutbox();
     await api("/auth/sign-out", { body: {} }).catch(() => {});
+    resetTheme();
     router.replace("/");
   }
 
@@ -77,7 +79,7 @@ export default function Settings() {
 
       {space ? (
         <div className="flex items-center gap-3.5 rounded-2xl bg-surface p-4 shadow-(--shadow-paper)">
-          <Frames size={40} />
+          <Heart size={36} />
           <span className="flex flex-col gap-0.5">
             <span className="font-display text-[22px] leading-[1.1]">{space.name}</span>
             <span className="text-[13px] text-muted">
@@ -86,6 +88,24 @@ export default function Settings() {
             <span className="text-xs text-muted">One space at a time, for each of you.</span>
           </span>
         </div>
+      ) : null}
+
+      {space?.status === "active" ? (
+        <section className="flex flex-col gap-2">
+          <Stamp>Make it yours</Stamp>
+          <Link href="/colours" className="flex min-h-[60px] items-center gap-3 rounded-(--radius-card) border border-line bg-surface px-3.5 py-2.5 text-ink no-underline">
+            <span className="flex gap-1" aria-hidden="true">
+              <span className="size-4 rounded-full bg-accent" />
+              <span className="size-4 rounded-full bg-second" />
+              <span className="size-4 rounded-full bg-petal" />
+            </span>
+            <span className="flex flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-medium">Colours and your ink</span>
+              <span className="text-[13px] text-muted">{familyName(space.palette)} · either of you can change it</span>
+            </span>
+            {chevron}
+          </Link>
+        </section>
       ) : null}
 
       <section className="flex flex-col gap-2">

@@ -225,6 +225,7 @@ type Relationship struct {
 	UnlinkedBy    *uuid.UUID
 	ReadOnlyUntil *time.Time
 	PurgedAt      *time.Time
+	Palette       string
 }
 
 type RelationshipInvitation struct {
@@ -299,6 +300,7 @@ type User struct {
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 	TimeZone              string
+	Ink                   string
 }
 
 type UserNotice struct {

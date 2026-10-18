@@ -382,7 +382,7 @@ func (q *Queries) ListPins(ctx context.Context, arg ListPinsParams) ([]Pin, erro
 }
 
 const membersOf = `-- name: MembersOf :many
-SELECT u.id, u.display_name, u.person_tint, u.time_zone
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink
 FROM relationship_members rm JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 ORDER BY rm.joined_at
 `
@@ -392,6 +392,7 @@ type MembersOfRow struct {
 	DisplayName string
 	PersonTint  string
 	TimeZone    string
+	Ink         string
 }
 
 // Everyone who was ever in the space (for read-only views after it closed).
@@ -409,6 +410,7 @@ func (q *Queries) MembersOf(ctx context.Context, relationshipID uuid.UUID) ([]Me
 			&i.DisplayName,
 			&i.PersonTint,
 			&i.TimeZone,
+			&i.Ink,
 		); err != nil {
 			return nil, err
 		}
@@ -442,7 +444,7 @@ func (q *Queries) OldestUnplannedPin(ctx context.Context, relationshipID uuid.UU
 }
 
 const readableSpaceFor = `-- name: ReadableSpaceFor :one
-SELECT r.id, r.name, r.status, r.read_only_until FROM relationship_members rm
+SELECT r.id, r.name, r.status, r.read_only_until, r.palette FROM relationship_members rm
 JOIN relationships r ON r.id = rm.relationship_id
 WHERE rm.user_id = $1
   AND ((rm.left_at IS NULL AND r.status = 'active')
@@ -456,6 +458,7 @@ type ReadableSpaceForRow struct {
 	Name          string
 	Status        string
 	ReadOnlyUntil *time.Time
+	Palette       string
 }
 
 // The space a user may read: their active space, or a closed one still inside its
@@ -468,6 +471,7 @@ func (q *Queries) ReadableSpaceFor(ctx context.Context, userID uuid.UUID) (Reada
 		&i.Name,
 		&i.Status,
 		&i.ReadOnlyUntil,
+		&i.Palette,
 	)
 	return i, err
 }

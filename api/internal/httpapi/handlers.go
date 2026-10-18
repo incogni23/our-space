@@ -19,11 +19,12 @@ type userJSON struct {
 	DisplayName string `json:"displayName"`
 	PersonTint  string `json:"personTint"`
 	TimeZone    string `json:"timeZone"`
+	Ink         string `json:"ink"`
 	PhoneMasked string `json:"phoneMasked,omitempty"`
 }
 
 func toUser(u store.User) userJSON {
-	out := userJSON{ID: u.ID.String(), DisplayName: u.DisplayName, PersonTint: u.PersonTint, TimeZone: u.TimeZone}
+	out := userJSON{ID: u.ID.String(), DisplayName: u.DisplayName, PersonTint: u.PersonTint, TimeZone: u.TimeZone, Ink: u.Ink}
 	if u.PhoneE164 != nil {
 		out.PhoneMasked = maskPhone(*u.PhoneE164)
 	}
@@ -47,13 +48,15 @@ type memberJSON struct {
 	DisplayName string    `json:"displayName"`
 	PersonTint  string    `json:"personTint"`
 	TimeZone    string    `json:"timeZone"`
-	JoinedAt    time.Time `json:"joinedAt"`
+	Ink         string    `json:"ink"`
+	JoinedAt    time.Time `json:"joinedAt,omitzero"`
 }
 
 type spaceJSON struct {
 	ID          string           `json:"id"`
 	Name        string           `json:"name"`
 	Status      string           `json:"status"`
+	Palette     string           `json:"palette"`
 	ActivatedAt *time.Time       `json:"activatedAt,omitempty"`
 	Members     []memberJSON     `json:"members"`
 	Invite      *inviteStateJSON `json:"invite,omitempty"`
@@ -67,11 +70,11 @@ type inviteStateJSON struct {
 
 func toSpace(sp pairing.Space) spaceJSON {
 	out := spaceJSON{
-		ID: sp.Relationship.ID.String(), Name: sp.Relationship.Name, Status: sp.Relationship.Status,
+		ID: sp.Relationship.ID.String(), Name: sp.Relationship.Name, Status: sp.Relationship.Status, Palette: sp.Relationship.Palette,
 		ActivatedAt: sp.Relationship.ActivatedAt, Members: []memberJSON{},
 	}
 	for _, m := range sp.Members {
-		out.Members = append(out.Members, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, JoinedAt: m.JoinedAt})
+		out.Members = append(out.Members, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, Ink: m.Ink, JoinedAt: m.JoinedAt})
 	}
 	if sp.Invite != nil {
 		out.Invite = &inviteStateJSON{State: sp.Invite.State, InviteeName: sp.Invite.InviteeName, ExpiresAt: sp.Invite.ExpiresAt}
@@ -197,9 +200,9 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 			members, _ := store.New(s.pool).MembersOf(r.Context(), ro.ID)
 			ms := make([]memberJSON, 0, len(members))
 			for _, m := range members {
-				ms = append(ms, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone})
+				ms = append(ms, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, Ink: m.Ink})
 			}
-			out["readOnlySpace"] = map[string]any{"id": ro.ID.String(), "name": ro.Name, "until": ro.ReadOnlyUntil, "members": ms}
+			out["readOnlySpace"] = map[string]any{"id": ro.ID.String(), "name": ro.Name, "palette": ro.Palette, "until": ro.ReadOnlyUntil, "members": ms}
 		}
 		avail, err := s.pairing.NewSpaceAvailableAt(r.Context(), uid)
 		if err != nil {
@@ -221,11 +224,22 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		DisplayName string `json:"displayName"`
 		PersonTint  string `json:"personTint"`
 		TimeZone    string `json:"timeZone"`
+		Ink         string `json:"ink"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
 	uid := session(r).UserID
+	if in.Ink != "" {
+		if !inks[in.Ink] {
+			writeError(w, http.StatusBadRequest, "invalid_input", "That ink isn’t one of the four.")
+			return
+		}
+		if err := store.New(s.pool).SetInk(r.Context(), store.SetInkParams{ID: uid, Ink: in.Ink}); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
 	if in.TimeZone != "" {
 		if _, err := time.LoadLocation(in.TimeZone); err != nil || len(in.TimeZone) > 64 {
 			writeError(w, http.StatusBadRequest, "invalid_input", "That time zone isn’t recognised.")

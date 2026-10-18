@@ -9,10 +9,10 @@ export function cx(...parts: Array<string | false | null | undefined>) {
 }
 
 /** A phone-width column, centred on larger screens. */
-export function Screen({ children, className }: { children: ReactNode; className?: string }) {
+export function Screen({ children, className, wide = false }: { children: ReactNode; className?: string; wide?: boolean }) {
   return (
-    <main className="min-h-dvh bg-ground text-ink">
-      <div className={cx("mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-6 px-5 pb-8 pt-12", className)}>
+    <main className="bu-screen min-h-dvh bg-ground text-ink">
+      <div className={cx("bu-col mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-6 px-5 pb-8 pt-12", wide && "bu-wide", className)}>
         {children}
       </div>
     </main>
@@ -21,12 +21,11 @@ export function Screen({ children, className }: { children: ReactNode; className
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cx("font-display text-[22px] tracking-[-0.01em]", className)} aria-label="Between Us">
+    <span className={cx("font-display text-[22px] font-black italic tracking-[-0.02em]", className)} aria-label="Between Us">
       between
-      <span
-        aria-hidden="true"
-        className="mx-[0.14em] inline-block h-[0.6em] w-[0.16em] rounded-[2px] bg-shared align-[-0.02em]"
-      />
+      <span aria-hidden="true" className="mx-[0.12em] not-italic text-accent">
+        ♥
+      </span>
       us
     </span>
   );
@@ -34,7 +33,7 @@ export function Logo({ className }: { className?: string }) {
 
 export function Stamp({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <span className={cx("font-stamp text-[11px] uppercase tracking-[0.1em] text-muted", className)}>{children}</span>
+    <span className={cx("font-stamp text-[11px] uppercase tracking-[0.16em] text-muted", className)}>{children}</span>
   );
 }
 
@@ -69,9 +68,52 @@ export function TopBar({ back, step, right }: { back?: string | (() => void); st
 
 export function Title({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <h1 className={cx("m-0 font-display text-[34px] font-normal leading-[1.08] tracking-[-0.015em]", className)}>
+    <h1 className={cx("m-0 font-display text-[34px] font-bold leading-[1.02] tracking-[-0.02em]", className)}>
       {children}
     </h1>
+  );
+}
+
+/** The magazine headline: Bodoni italic black. For feelings, not for forms. */
+export function PrintTitle({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <h1 className={cx("m-0 font-display text-[48px] font-black italic leading-[0.9] tracking-[-0.02em]", className)}>
+      {children}
+    </h1>
+  );
+}
+
+/** Words a person wrote, in their own ink. */
+export function Hand({ children, ink, className }: { children: ReactNode; ink?: string; className?: string }) {
+  return (
+    <span className={cx("font-hand text-[22px] leading-[1.05]", className)} style={{ color: ink ?? "var(--my-ink)" }}>
+      {children}
+    </span>
+  );
+}
+
+/** Masthead rule: thick over thin, Courier caps between. */
+export function Rule({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={cx(
+        "flex justify-between gap-2 border-y border-t-2 border-ink py-[5px] font-type text-[10.5px] uppercase tracking-[0.12em]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** A strip of washi tape. */
+export function Tape({ className, tone = "petal", rotate = -4 }: { className?: string; tone?: "petal" | "tape"; rotate?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cx("washi pointer-events-none absolute h-5 w-16", tone === "petal" ? "bg-petal" : "bg-tape", className)}
+      style={{ transform: `rotate(${rotate}deg)` }}
+    />
   );
 }
 
@@ -83,13 +125,13 @@ type Variant = "primary" | "secondary" | "danger" | "text";
 
 const variants: Record<Variant, string> = {
   primary: "bg-action text-action-text hover:bg-action-hover active:bg-action-pressed",
-  secondary: "border border-line bg-surface text-ink hover:bg-sunken",
+  secondary: "border-[1.5px] border-ink bg-transparent text-ink hover:bg-paper",
   danger: "bg-danger text-inverse hover:bg-danger-hover",
   text: "min-h-11 bg-transparent text-ink underline underline-offset-[3px]",
 };
 
 const base =
-  "inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-(--radius-card) px-4 text-base font-medium no-underline transition-colors duration-(--dur-quick) disabled:cursor-not-allowed disabled:opacity-55";
+  "inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-(--radius-button) px-5 text-base font-medium no-underline transition-colors duration-(--dur-quick) disabled:cursor-not-allowed disabled:opacity-55";
 
 export function Button({
   variant = "primary",
@@ -163,7 +205,7 @@ export function Field({
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx("rounded-(--radius-card) border border-line bg-surface px-4 py-3.5", className)}>{children}</div>
+    <div className={cx("rounded-(--radius-card) bg-surface px-4 py-3.5 shadow-(--shadow-paper)", className)}>{children}</div>
   );
 }
 
@@ -238,13 +280,25 @@ export function Avatar({
   );
 }
 
+export const HEART = "M12 20.5C5 15.6 2.5 12.4 2.5 8.9 2.5 6.2 4.6 4 7.3 4c1.8 0 3.5 1 4.7 2.6C13.2 5 14.9 4 16.7 4c2.7 0 4.8 2.2 4.8 4.9 0 3.5-2.5 6.7-9.5 11.6z";
+
+export function Heart({ size = 22, color = "var(--accent)", className }: { size?: number; color?: string; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path d={HEART} fill={color} />
+    </svg>
+  );
+}
+
 export function Loading() {
   return (
     <Screen className="items-center justify-center">
       <span className="sr-only" role="status">
         Loading
       </span>
-      <Frames size={40} />
+      <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" className="animate-pulse">
+        <path d="M12 20.5C5 15.6 2.5 12.4 2.5 8.9 2.5 6.2 4.6 4 7.3 4c1.8 0 3.5 1 4.7 2.6C13.2 5 14.9 4 16.7 4c2.7 0 4.8 2.2 4.8 4.9 0 3.5-2.5 6.7-9.5 11.6z" fill="var(--accent)" />
+      </svg>
     </Screen>
   );
 }

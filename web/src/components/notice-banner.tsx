@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { markNoticeSeen, type Notice } from "@/lib/api";
+import { familyName } from "@/lib/theme";
 import { dayShort, timeOnly } from "@/lib/time";
 
 /** Quiet one-time notices (anything but space_closed, which has its own screen). */
@@ -17,6 +18,12 @@ export function NoticeBanner({ notices, tz }: { notices: Notice[]; tz?: string }
         <div key={n.id} className="flex items-center gap-3 rounded-(--radius-card) bg-sunken px-3.5 py-2.5 text-sm leading-[1.45]">
           <span className="flex-1">
             {n.kind === "partner_number_updated" ? `${n.payload.name || "Your person"} updated their number.` : null}
+            {n.kind === "palette_changed" ? (
+              <>
+                {n.payload.name || "Your person"} painted the space{" "}
+                <span className="font-hand text-[19px] text-accent-ink">{familyName(n.payload.palette).toLowerCase()}</span>.
+              </>
+            ) : null}
             {n.kind === "note_delivered" ? (
               <>
                 A note from {n.payload.fromName || "your person"} is here.{" "}

@@ -61,7 +61,7 @@ export default function MakeItYours() {
       </div>
 
       <div className="flex items-baseline justify-between">
-        <h1 className="m-0 font-display text-[32px] font-normal leading-[1.08] tracking-[-0.015em]">Make it yours.</h1>
+        <h1 className="m-0 font-display text-[32px] font-black italic leading-[0.95] tracking-[-0.02em]">Make it yours.</h1>
         {!joinedByMe ? <span className="font-stamp text-[11px] tracking-[0.1em] text-muted">STEP 4 OF 4</span> : null}
       </div>
 

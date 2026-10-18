@@ -93,7 +93,30 @@ func (s *Server) handleGetNote(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	v, firstRead, err := s.notes.Get(r.Context(), sc, id)
+	v, err := s.notes.Get(r.Context(), sc, id)
+	if err != nil {
+		s.domainError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"note": toNote(v)})
+}
+
+// POST /notes/{id}/open — the recipient broke the seal (v2 letter). Works in the
+// read-only window too: reading isn't writing.
+func (s *Server) handleOpenNote(w http.ResponseWriter, r *http.Request) {
+	var in struct{}
+	if !decode(w, r, &in) {
+		return
+	}
+	sc, ok := s.noteScope(w, r, false)
+	if !ok {
+		return
+	}
+	id, ok := parseUUID(w, chi.URLParam(r, "id"))
+	if !ok {
+		return
+	}
+	v, firstRead, err := s.notes.Open(r.Context(), sc, id)
 	if err != nil {
 		s.domainError(w, r, err)
 		return

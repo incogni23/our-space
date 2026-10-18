@@ -3,8 +3,30 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, api, type Me } from "./api";
+import { applyFamily, applyInk, resetTheme } from "./theme";
 
 type State = { me: Me | null; loading: boolean; error: string | null };
+
+// The last /me any page loaded, so chrome (the desktop sidebar) can show it
+// without fetching again.
+let lastMe: Me | null = null;
+const meListeners = new Set<(m: Me | null) => void>();
+function publishMe(m: Me | null) {
+  lastMe = m;
+  meListeners.forEach((l) => l(m));
+}
+
+export function useCachedMe(): Me | null {
+  const [m, setM] = useState<Me | null>(lastMe);
+  useEffect(() => {
+    setM(lastMe);
+    meListeners.add(setM);
+    return () => {
+      meListeners.delete(setM);
+    };
+  }, []);
+  return m;
+}
 
 /**
  * Loads the signed-in person. Signed-out visitors go to `signedOut` (default "/"),
@@ -18,6 +40,11 @@ export function useMe(opts: { signedOut?: string | null } = {}) {
   const load = useCallback(async () => {
     try {
       const me = await api<Me>("/me");
+      const palette = me.space?.palette ?? me.readOnlySpace?.palette;
+      if (palette) applyFamily(palette);
+      else resetTheme();
+      applyInk(me.user.ink);
+      publishMe(me);
       setState({ me, loading: false, error: null });
       return me;
     } catch (err) {

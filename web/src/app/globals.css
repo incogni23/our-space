@@ -1,19 +1,57 @@
 @import "tailwindcss";
 @import "../../../design/tokens.css";
+@import "../../../design/families.css";
 
-/* Fonts come from next/font; the token stacks put them first. */
+/* Fonts come from next/font; the family stacks put them first. */
 :root {
-  /* Envelope flap on a sealed note (NoteLetter "waiting"); a shade of shared-wash. */
-  --shared-flap: #EBD3CE;
-  --font-serif: var(--font-newsreader), 'Iowan Old Style', Georgia, serif;
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: var(--font-dm-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-display: var(--font-bodoni), 'Bodoni Moda', Didot, Georgia, serif;
+  --font-hand: var(--font-caveat), 'Caveat', cursive;
+  --font-type: var(--font-courier), 'Courier Prime', ui-monospace, monospace;
+  --font-ui: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-type);
+  --my-ink: var(--accent-ink);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --shared-flap: #5A3D43; }
+/* v2 "Love, in print": the v1 semantic roles now come from the space's colour
+   family, so every screen follows the palette. Midnight replaces the old evening
+   theme, so this outranks tokens.css's prefers-color-scheme block. */
+:root:root {
+  color-scheme: light;
+  --bg-ground: var(--ground);
+  --bg-surface: var(--paper);
+  --bg-sunken: color-mix(in srgb, var(--petal) 45%, var(--ground));
+  --line-subtle: color-mix(in srgb, var(--text) 14%, transparent);
+  --line-control: color-mix(in srgb, var(--text) 55%, var(--paper));
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --text-inverse: var(--paper);
+  --action-primary: var(--nav);
+  --action-primary-hover: color-mix(in srgb, var(--nav) 86%, var(--ground));
+  --action-primary-pressed: color-mix(in srgb, var(--nav) 76%, var(--ground));
+  --action-primary-text: var(--nav-text);
+  --shared-tone: var(--accent);
+  --shared-wash: var(--petal);
+  --shared-ink: var(--accent-ink);
+  --shared-flap: color-mix(in srgb, var(--petal) 82%, var(--text));
+  --focus-ring: var(--text);
+  --radius-control: 14px;
+  --radius-button: 27px;
+  --shadow-paper: 0 14px 24px -14px rgba(0, 0, 0, 0.55);
+  --shadow-lift: 0 16px 30px -12px rgba(0, 0, 0, 0.5);
 }
-:root[data-theme="dark"] { --shared-flap: #5A3D43; }
+:root:root[data-family="midnight"] {
+  color-scheme: dark;
+  --status-ok-wash: #2F3A2C;
+  --status-ok-ink: #B9C6AC;
+  --status-time-wash: #4A3226;
+  --status-time-ink: #E6B79F;
+  --status-error: #F09A88;
+  --status-error-wash: #4A2620;
+  --action-destructive: #F09A88;
+  --action-destructive-hover: #F4B0A2;
+}
 
 /* Tailwind names map to semantic tokens only. */
 @theme inline {
@@ -51,11 +89,49 @@
   --color-mauve-wash: var(--person-mauve-wash);
   --color-mauve-ink: var(--person-mauve-ink);
 
-  --font-display: var(--font-serif);
-  --font-body: var(--font-sans);
-  --font-stamp: var(--font-mono);
+  /* v2 family colours, for the print surfaces */
+  --color-paper: var(--paper);
+  --color-petal: var(--petal);
+  --color-tape: var(--tape);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-second: var(--second);
+  --color-nav: var(--nav);
+  --color-nav-text: var(--nav-text);
+  --color-on-accent: var(--on-accent);
+  --color-my-ink: var(--my-ink);
+
+  --font-display: var(--font-bodoni), 'Bodoni Moda', Didot, Georgia, serif;
+  --font-hand: var(--font-caveat), 'Caveat', cursive;
+  --font-type: var(--font-courier), 'Courier Prime', ui-monospace, monospace;
+  --font-stamp: var(--font-courier), 'Courier Prime', ui-monospace, monospace;
+  --font-body: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
+}
+
+/* Print details */
+.washi {
+  clip-path: polygon(0% 10%, 3% 0%, 97% 0%, 100% 14%, 98% 34%, 100% 52%, 98% 72%, 100% 90%, 97% 100%, 3% 100%, 0% 86%, 2% 66%, 0% 48%, 2% 28%);
+}
+/* Photos are black and white in the UI. */
+.bw {
+  filter: grayscale(1) contrast(1.05);
+}
+.lined {
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 29px, color-mix(in srgb, var(--second) 22%, transparent) 29px, color-mix(in srgb, var(--second) 22%, transparent) 30px);
+}
+@keyframes bu-spin { to { transform: rotate(360deg); } }
+.bu-spin { animation: bu-spin 28s linear infinite; }
+.bu-rec { animation: bu-spin 6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .bu-spin, .bu-rec { animation: none; } }
+
+/* Laptop: pages inside a space get the sidebar (SideNav) and a wider column.
+   `wide` screens (Our Space, a board, Our Story) use the desktop magazine grid. */
+@media (min-width: 1024px) {
+  body:has(.bu-side) .bu-screen { padding-left: 264px; }
+  body:has(.bu-side) .bu-col { max-width: 680px; padding-bottom: 64px; padding-top: 40px; }
+  body:has(.bu-side) .bu-col.bu-wide { max-width: 1160px; padding-left: clamp(16px, 4vw, 48px); padding-right: clamp(16px, 4vw, 48px); }
 }

@@ -38,7 +38,7 @@ export default function Notes() {
         Space
       </Link>
       <div className="flex items-center justify-between">
-        <h1 className="m-0 font-display text-[34px] font-normal leading-[1.05]">Notes</h1>
+        <h1 className="m-0 font-display text-[44px] font-black italic leading-[0.95] tracking-[-0.02em]">Notes</h1>
         {readOnly ? null : (
           <ButtonLink href="/notes/new" className="min-h-11 w-auto px-3.5 text-sm">
             Write one
