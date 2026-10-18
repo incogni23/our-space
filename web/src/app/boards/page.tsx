@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { BottomNav } from "@/components/bottom-nav";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { Button, ButtonLink, ErrorText, Loading, Screen, Title } from "@/components/ui";
 import { api, errorMessage, type Board } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
@@ -10,7 +11,7 @@ import { useLiveTick } from "@/lib/live";
 
 // Boards index
 export default function Boards() {
-  const { ready, people } = useSpace();
+  const { ready, people, readOnly, spaceName, me } = useSpace();
   const tick = useLiveTick(["board.", "pin."], ready);
   const [boards, setBoards] = useState<Board[] | null>(null);
   const [adding, setAdding] = useState(false);
@@ -47,7 +48,7 @@ export default function Boards() {
     <Screen className="gap-4 px-4 pb-[120px] pt-14">
       <div className="flex items-end justify-between">
         <Title className="text-[32px]">Boards</Title>
-        {!adding ? (
+        {!adding && !readOnly ? (
           <button type="button" onClick={() => setAdding(true)} className="min-h-11 px-1 text-sm font-medium text-ink underline underline-offset-[3px]">
             New board
           </button>
@@ -74,9 +75,14 @@ export default function Boards() {
         </form>
       ) : null}
 
+      {readOnly ? <ReadOnlyBanner name={spaceName} until={me?.readOnlySpace?.until} /> : null}
+
       <ErrorText>{error}</ErrorText>
 
       {boards.length === 0 ? (
+        readOnly ? (
+          <p className="m-0 pt-6 text-center text-[15px] text-muted">Nothing was saved here.</p>
+        ) : (
         <div className="flex flex-col gap-3 pt-6 text-center">
           <h2 className="m-0 font-display text-2xl font-normal">A board for anything.</h2>
           <p className="m-0 text-[15px] leading-[1.55] text-muted">Places, songs, someday trips. Start with one.</p>
@@ -84,6 +90,7 @@ export default function Boards() {
             Save something for us
           </ButtonLink>
         </div>
+        )
       ) : (
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0">
           {boards.map((b) => {
@@ -110,7 +117,7 @@ export default function Boards() {
         </ul>
       )}
 
-      <BottomNav current="boards" />
+      <BottomNav current="boards" readOnly={readOnly} />
     </Screen>
   );
 }

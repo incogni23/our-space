@@ -27,6 +27,7 @@ import (
 	"betweenus/api/internal/store"
 	"betweenus/api/internal/story"
 	"betweenus/api/internal/token"
+	"betweenus/api/internal/unfurl"
 )
 
 const (
@@ -55,11 +56,15 @@ type Server struct {
 	media   *media.Service
 	story   *story.Service
 	live    *live.Hub
+
+	unfurl     *unfurl.Client
+	previewSem chan struct{}
 }
 
 func New(cfg Config, log *slog.Logger, pool *pgxpool.Pool, a *auth.Service, p *pairing.Service) *Server {
 	return &Server{cfg: cfg, log: log, pool: pool, auth: a, pairing: p, boards: boards.NewService(pool), plans: plans.NewService(pool),
-		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log)}
+		media: media.NewService(pool, cfg.Blobs), story: story.NewService(pool), live: live.NewHub(pool, log),
+		unfurl: unfurl.New(), previewSem: make(chan struct{}, 4)}
 }
 
 // Start runs background work (the live-event listener) until ctx ends.
@@ -134,6 +139,7 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/memories", s.handleCreateMemory)
 			r.Get("/memories/{id}", s.handleGetMemory)
 			r.Delete("/memories/{id}", s.handleDeleteMemory)
+			r.Get("/export", s.handleExport)
 		})
 	})
 	return r

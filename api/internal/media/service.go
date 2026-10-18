@@ -82,3 +82,9 @@ func (s *Service) Open(ctx context.Context, spaceID, id uuid.UUID, variant strin
 	}
 	return rc, err
 }
+
+// OpenKey streams a stored object by key (export only; callers have already
+// checked the key belongs to the caller's space).
+func (s *Service) OpenKey(ctx context.Context, key string) (io.ReadCloser, error) {
+	return s.blobs.Get(ctx, key)
+}

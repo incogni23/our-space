@@ -55,9 +55,17 @@ func (s *Server) planScope(w http.ResponseWriter, r *http.Request) (plans.Scope,
 	return plans.Scope{SpaceID: sp.ID, UserID: sp.UserID}, true
 }
 
+func (s *Server) planReadScope(w http.ResponseWriter, r *http.Request) (plans.Scope, bool) {
+	sp, ok := s.readSpace(w, r)
+	if !ok {
+		return plans.Scope{}, false
+	}
+	return plans.Scope{SpaceID: sp.ID, UserID: sp.UserID}, true
+}
+
 // GET /plans?days=120 — live plans with occurrences from now (minus 2h) onward.
 func (s *Server) handleListPlans(w http.ResponseWriter, r *http.Request) {
-	sc, ok := s.planScope(w, r)
+	sc, ok := s.planReadScope(w, r)
 	if !ok {
 		return
 	}
@@ -126,7 +134,7 @@ func (s *Server) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetPlan(w http.ResponseWriter, r *http.Request) {
-	sc, ok := s.planScope(w, r)
+	sc, ok := s.planReadScope(w, r)
 	if !ok {
 		return
 	}

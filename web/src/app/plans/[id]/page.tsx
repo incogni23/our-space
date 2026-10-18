@@ -16,7 +16,7 @@ function PlanDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const created = useSearchParams().get("created");
-  const { ready, me, partner } = useSpace();
+  const { ready, me, partner, readOnly } = useSpace();
   const tick = useLiveTick(["plan."], ready);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [suggesting, setSuggesting] = useState(false);
@@ -120,8 +120,8 @@ function PlanDetail() {
   }
 
   const st = planState(plan, me.user.id, pName);
-  const open = plan.status === "proposed" || plan.status === "confirmed";
-  const myTurn = plan.status === "proposed" && st.tone === "you";
+  const open = !readOnly && (plan.status === "proposed" || plan.status === "confirmed");
+  const myTurn = !readOnly && plan.status === "proposed" && st.tone === "you";
   const n = daysUntil(next, tz);
   const theirs = partner ? theirTime(next, tz, partner.timeZone) : null;
   const sAt = suggesting ? instantFor(sDate, sTime, tz) : null;
@@ -316,7 +316,7 @@ function PlanDetail() {
         </div>
       ) : null}
 
-      <BottomNav current="plans" />
+      <BottomNav current="plans" readOnly={readOnly} />
     </Screen>
   );
 }

@@ -37,3 +37,19 @@ ORDER BY mm.position;
 
 -- name: DeleteMemory :execrows
 UPDATE memories SET deleted_at = now() WHERE id = $1 AND relationship_id = $2 AND deleted_at IS NULL;
+
+-- name: AllMemoriesWithMedia :many
+-- For export: every memory and its photo keys.
+SELECT m.id, m.kind, m.title, m.caption, m.place, m.happened_on, m.ends_on, md.id AS media_id, md.key_full, mm.position
+FROM memories m
+LEFT JOIN memory_media mm ON mm.memory_id = m.id
+LEFT JOIN media md ON md.id = mm.media_id AND md.deleted_at IS NULL
+WHERE m.relationship_id = $1 AND m.deleted_at IS NULL
+ORDER BY m.happened_on, m.id, mm.position;
+
+-- name: AllPins :many
+SELECT p.*, b.name AS board_name FROM pins p JOIN boards b ON b.id = p.board_id
+WHERE p.relationship_id = $1 AND p.deleted_at IS NULL ORDER BY b.name, p.created_at;
+
+-- name: AllPlans :many
+SELECT * FROM plans WHERE relationship_id = $1 ORDER BY starts_at;

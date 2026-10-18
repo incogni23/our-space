@@ -33,6 +33,10 @@ export type Pin = {
   note: string;
   status: PinStatus;
   createdAt: string;
+  previewStatus: "none" | "pending" | "done" | "failed";
+  previewSite?: string;
+  previewDescription?: string;
+  previewMediaId?: string;
 };
 
 export type PlanStatus = "proposed" | "confirmed" | "declined" | "cancelled";
@@ -76,7 +80,18 @@ export type Notice =
     }
   | { id: string; kind: "partner_number_updated"; createdAt: string; payload: { name: string } };
 
-export type Me = { user: User; space: Space | null; newSpaceAvailableAt?: string; notices: Notice[] };
+export type ReadOnlySpace = { id: string; name: string; until: string; members: Member[] };
+
+export type Me = {
+  user: User;
+  space: Space | null;
+  newSpaceAvailableAt?: string;
+  notices: Notice[];
+  /** A closed space still inside its read-only window. */
+  readOnlySpace?: ReadOnlySpace;
+};
+
+export const EXPORT_URL = "/api/v1/export";
 
 export type SignInResult = {
   user: User;

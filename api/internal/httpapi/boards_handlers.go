@@ -21,28 +21,43 @@ type boardJSON struct {
 }
 
 type pinJSON struct {
-	ID        string    `json:"id"`
-	BoardID   string    `json:"boardId"`
-	BoardName string    `json:"boardName,omitempty"`
-	CreatedBy string    `json:"createdBy"`
-	Kind      string    `json:"kind"`
-	Title     string    `json:"title"`
-	URL       *string   `json:"url,omitempty"`
-	Note      string    `json:"note"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"createdAt"`
+	PreviewStatus      string    `json:"previewStatus"`
+	PreviewSite        string    `json:"previewSite,omitempty"`
+	PreviewDescription string    `json:"previewDescription,omitempty"`
+	PreviewMediaID     *string   `json:"previewMediaId,omitempty"`
+	ID                 string    `json:"id"`
+	BoardID            string    `json:"boardId"`
+	BoardName          string    `json:"boardName,omitempty"`
+	CreatedBy          string    `json:"createdBy"`
+	Kind               string    `json:"kind"`
+	Title              string    `json:"title"`
+	URL                *string   `json:"url,omitempty"`
+	Note               string    `json:"note"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"createdAt"`
 }
 
 func toPin(p store.Pin, boardName string) pinJSON {
 	return pinJSON{
 		ID: p.ID.String(), BoardID: p.BoardID.String(), BoardName: boardName, CreatedBy: p.CreatedBy.String(),
 		Kind: p.Kind, Title: p.Title, URL: p.Url, Note: p.Note, Status: p.Status, CreatedAt: p.CreatedAt,
+		PreviewStatus: p.PreviewStatus, PreviewSite: p.PreviewSite, PreviewDescription: p.PreviewDescription, PreviewMediaID: idPtr(p.PreviewMediaID),
 	}
 }
 
-// space resolves the caller's active space or writes the error.
+// space resolves the caller's active space (for writes) or writes the error.
 func (s *Server) space(w http.ResponseWriter, r *http.Request) (boards.Space, bool) {
 	sp, err := s.boards.Resolve(r.Context(), session(r).UserID)
+	if err != nil {
+		s.domainError(w, r, err)
+		return boards.Space{}, false
+	}
+	return sp, true
+}
+
+// readSpace also allows a closed space during its read-only window (reads only).
+func (s *Server) readSpace(w http.ResponseWriter, r *http.Request) (boards.Space, bool) {
+	sp, err := s.boards.ResolveRead(r.Context(), session(r).UserID)
 	if err != nil {
 		s.domainError(w, r, err)
 		return boards.Space{}, false
@@ -65,13 +80,14 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 		pins = append(pins, toPin(store.Pin{
 			ID: p.ID, RelationshipID: p.RelationshipID, BoardID: p.BoardID, CreatedBy: p.CreatedBy, Kind: p.Kind,
 			Title: p.Title, Url: p.Url, Note: p.Note, Status: p.Status, CreatedAt: p.CreatedAt,
+			PreviewStatus: p.PreviewStatus, PreviewSite: p.PreviewSite, PreviewDescription: p.PreviewDescription, PreviewMediaID: p.PreviewMediaID,
 		}, p.BoardName))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"newFromPartner": pins})
 }
 
 func (s *Server) handleListBoards(w http.ResponseWriter, r *http.Request) {
-	sp, ok := s.space(w, r)
+	sp, ok := s.readSpace(w, r)
 	if !ok {
 		return
 	}
@@ -108,7 +124,7 @@ func (s *Server) handleCreateBoard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetBoard(w http.ResponseWriter, r *http.Request) {
-	sp, ok := s.space(w, r)
+	sp, ok := s.readSpace(w, r)
 	if !ok {
 		return
 	}
@@ -164,11 +180,16 @@ func (s *Server) handleCreatePin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.publish(r, sp.ID, "pin.created", p.ID.String())
+	s.startPreview(sp, p)
+	p.PreviewStatus = "pending"
+	if p.Url == nil {
+		p.PreviewStatus = "none"
+	}
 	writeJSON(w, http.StatusCreated, map[string]any{"pin": toPin(p, "")})
 }
 
 func (s *Server) handleGetPin(w http.ResponseWriter, r *http.Request) {
-	sp, ok := s.space(w, r)
+	sp, ok := s.readSpace(w, r)
 	if !ok {
 		return
 	}
@@ -196,6 +217,7 @@ func (s *Server) handleGetPin(w http.ResponseWriter, r *http.Request) {
 		"pin": toPin(store.Pin{
 			ID: p.ID, RelationshipID: p.RelationshipID, BoardID: p.BoardID, CreatedBy: p.CreatedBy, Kind: p.Kind,
 			Title: p.Title, Url: p.Url, Note: p.Note, Status: p.Status, CreatedAt: p.CreatedAt,
+			PreviewStatus: p.PreviewStatus, PreviewSite: p.PreviewSite, PreviewDescription: p.PreviewDescription, PreviewMediaID: p.PreviewMediaID,
 		}, p.BoardName),
 		"notes": notes,
 	})

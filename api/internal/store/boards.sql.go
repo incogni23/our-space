@@ -58,7 +58,7 @@ func (q *Queries) CreateBoard(ctx context.Context, arg CreateBoardParams) (Board
 const createPin = `-- name: CreatePin :one
 INSERT INTO pins (relationship_id, board_id, created_by, kind, title, url, note)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at
+RETURNING id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at, preview_status, preview_site, preview_description, preview_media_id
 `
 
 type CreatePinParams struct {
@@ -95,6 +95,10 @@ func (q *Queries) CreatePin(ctx context.Context, arg CreatePinParams) (Pin, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PreviewStatus,
+		&i.PreviewSite,
+		&i.PreviewDescription,
+		&i.PreviewMediaID,
 	)
 	return i, err
 }
@@ -163,7 +167,7 @@ func (q *Queries) GetBoard(ctx context.Context, arg GetBoardParams) (Board, erro
 }
 
 const getPin = `-- name: GetPin :one
-SELECT p.id, p.relationship_id, p.board_id, p.created_by, p.kind, p.title, p.url, p.note, p.status, p.created_at, p.updated_at, p.deleted_at, b.name AS board_name FROM pins p JOIN boards b ON b.id = p.board_id
+SELECT p.id, p.relationship_id, p.board_id, p.created_by, p.kind, p.title, p.url, p.note, p.status, p.created_at, p.updated_at, p.deleted_at, p.preview_status, p.preview_site, p.preview_description, p.preview_media_id, b.name AS board_name FROM pins p JOIN boards b ON b.id = p.board_id
 WHERE p.id = $1 AND p.relationship_id = $2 AND p.deleted_at IS NULL
 `
 
@@ -173,19 +177,23 @@ type GetPinParams struct {
 }
 
 type GetPinRow struct {
-	ID             uuid.UUID
-	RelationshipID uuid.UUID
-	BoardID        uuid.UUID
-	CreatedBy      uuid.UUID
-	Kind           string
-	Title          string
-	Url            *string
-	Note           string
-	Status         string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      *time.Time
-	BoardName      string
+	ID                 uuid.UUID
+	RelationshipID     uuid.UUID
+	BoardID            uuid.UUID
+	CreatedBy          uuid.UUID
+	Kind               string
+	Title              string
+	Url                *string
+	Note               string
+	Status             string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          *time.Time
+	PreviewStatus      string
+	PreviewSite        string
+	PreviewDescription string
+	PreviewMediaID     *uuid.UUID
+	BoardName          string
 }
 
 func (q *Queries) GetPin(ctx context.Context, arg GetPinParams) (GetPinRow, error) {
@@ -204,6 +212,10 @@ func (q *Queries) GetPin(ctx context.Context, arg GetPinParams) (GetPinRow, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PreviewStatus,
+		&i.PreviewSite,
+		&i.PreviewDescription,
+		&i.PreviewMediaID,
 		&i.BoardName,
 	)
 	return i, err
@@ -294,7 +306,7 @@ func (q *Queries) ListPinNotes(ctx context.Context, pinID uuid.UUID) ([]ListPinN
 }
 
 const listPins = `-- name: ListPins :many
-SELECT id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at FROM pins WHERE board_id = $1 AND relationship_id = $2 AND deleted_at IS NULL
+SELECT id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at, preview_status, preview_site, preview_description, preview_media_id FROM pins WHERE board_id = $1 AND relationship_id = $2 AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
@@ -325,6 +337,10 @@ func (q *Queries) ListPins(ctx context.Context, arg ListPinsParams) ([]Pin, erro
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.PreviewStatus,
+			&i.PreviewSite,
+			&i.PreviewDescription,
+			&i.PreviewMediaID,
 		); err != nil {
 			return nil, err
 		}
@@ -336,8 +352,78 @@ func (q *Queries) ListPins(ctx context.Context, arg ListPinsParams) ([]Pin, erro
 	return items, nil
 }
 
+const membersOf = `-- name: MembersOf :many
+SELECT u.id, u.display_name, u.person_tint, u.time_zone
+FROM relationship_members rm JOIN users u ON u.id = rm.user_id
+WHERE rm.relationship_id = $1 ORDER BY rm.joined_at
+`
+
+type MembersOfRow struct {
+	ID          uuid.UUID
+	DisplayName string
+	PersonTint  string
+	TimeZone    string
+}
+
+// Everyone who was ever in the space (for read-only views after it closed).
+func (q *Queries) MembersOf(ctx context.Context, relationshipID uuid.UUID) ([]MembersOfRow, error) {
+	rows, err := q.db.Query(ctx, membersOf, relationshipID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MembersOfRow
+	for rows.Next() {
+		var i MembersOfRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayName,
+			&i.PersonTint,
+			&i.TimeZone,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const readableSpaceFor = `-- name: ReadableSpaceFor :one
+SELECT r.id, r.name, r.status, r.read_only_until FROM relationship_members rm
+JOIN relationships r ON r.id = rm.relationship_id
+WHERE rm.user_id = $1
+  AND ((rm.left_at IS NULL AND r.status = 'active')
+    OR (r.status = 'unlinked' AND r.read_only_until > now()))
+ORDER BY (r.status = 'active') DESC, r.unlinked_at DESC NULLS LAST
+LIMIT 1
+`
+
+type ReadableSpaceForRow struct {
+	ID            uuid.UUID
+	Name          string
+	Status        string
+	ReadOnlyUntil *time.Time
+}
+
+// The space a user may read: their active space, or a closed one still inside its
+// read-only window (both former members can read and download until then).
+func (q *Queries) ReadableSpaceFor(ctx context.Context, userID uuid.UUID) (ReadableSpaceForRow, error) {
+	row := q.db.QueryRow(ctx, readableSpaceFor, userID)
+	var i ReadableSpaceForRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Status,
+		&i.ReadOnlyUntil,
+	)
+	return i, err
+}
+
 const recentPinsBy = `-- name: RecentPinsBy :many
-SELECT p.id, p.relationship_id, p.board_id, p.created_by, p.kind, p.title, p.url, p.note, p.status, p.created_at, p.updated_at, p.deleted_at, b.name AS board_name FROM pins p JOIN boards b ON b.id = p.board_id
+SELECT p.id, p.relationship_id, p.board_id, p.created_by, p.kind, p.title, p.url, p.note, p.status, p.created_at, p.updated_at, p.deleted_at, p.preview_status, p.preview_site, p.preview_description, p.preview_media_id, b.name AS board_name FROM pins p JOIN boards b ON b.id = p.board_id
 WHERE p.relationship_id = $1 AND p.created_by = $2 AND p.deleted_at IS NULL AND p.created_at > $3
 ORDER BY p.created_at DESC
 LIMIT 10
@@ -350,19 +436,23 @@ type RecentPinsByParams struct {
 }
 
 type RecentPinsByRow struct {
-	ID             uuid.UUID
-	RelationshipID uuid.UUID
-	BoardID        uuid.UUID
-	CreatedBy      uuid.UUID
-	Kind           string
-	Title          string
-	Url            *string
-	Note           string
-	Status         string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      *time.Time
-	BoardName      string
+	ID                 uuid.UUID
+	RelationshipID     uuid.UUID
+	BoardID            uuid.UUID
+	CreatedBy          uuid.UUID
+	Kind               string
+	Title              string
+	Url                *string
+	Note               string
+	Status             string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          *time.Time
+	PreviewStatus      string
+	PreviewSite        string
+	PreviewDescription string
+	PreviewMediaID     *uuid.UUID
+	BoardName          string
 }
 
 // What the other person saved lately ("New from Dev").
@@ -388,6 +478,10 @@ func (q *Queries) RecentPinsBy(ctx context.Context, arg RecentPinsByParams) ([]R
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.PreviewStatus,
+			&i.PreviewSite,
+			&i.PreviewDescription,
+			&i.PreviewMediaID,
 			&i.BoardName,
 		); err != nil {
 			return nil, err
@@ -419,6 +513,50 @@ func (q *Queries) RestorePin(ctx context.Context, arg RestorePinParams) (int64, 
 	return result.RowsAffected(), nil
 }
 
+const setPinPreview = `-- name: SetPinPreview :exec
+UPDATE pins SET
+    preview_status = $1,
+    preview_site = $2,
+    preview_description = $3,
+    preview_media_id = $4,
+    title = CASE WHEN title = $5::text AND $6::text <> '' THEN $6::text ELSE title END,
+    updated_at = now()
+WHERE id = $7 AND deleted_at IS NULL
+`
+
+type SetPinPreviewParams struct {
+	Status       string
+	Site         string
+	Description  string
+	MediaID      *uuid.UUID
+	DefaultTitle string
+	NewTitle     string
+	ID           uuid.UUID
+}
+
+// Fills the preview; replaces the title only if it is still the default (the host name).
+func (q *Queries) SetPinPreview(ctx context.Context, arg SetPinPreviewParams) error {
+	_, err := q.db.Exec(ctx, setPinPreview,
+		arg.Status,
+		arg.Site,
+		arg.Description,
+		arg.MediaID,
+		arg.DefaultTitle,
+		arg.NewTitle,
+		arg.ID,
+	)
+	return err
+}
+
+const setPinPreviewPending = `-- name: SetPinPreviewPending :exec
+UPDATE pins SET preview_status = 'pending' WHERE id = $1
+`
+
+func (q *Queries) SetPinPreviewPending(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, setPinPreviewPending, id)
+	return err
+}
+
 const setTimeZone = `-- name: SetTimeZone :exec
 UPDATE users SET time_zone = $2, updated_at = now() WHERE id = $1
 `
@@ -441,7 +579,7 @@ UPDATE pins SET
     board_id = coalesce($6, board_id),
     updated_at = now()
 WHERE id = $1 AND relationship_id = $2 AND deleted_at IS NULL
-RETURNING id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at
+RETURNING id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at, preview_status, preview_site, preview_description, preview_media_id
 `
 
 type UpdatePinParams struct {
@@ -476,6 +614,10 @@ func (q *Queries) UpdatePin(ctx context.Context, arg UpdatePinParams) (Pin, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.PreviewStatus,
+		&i.PreviewSite,
+		&i.PreviewDescription,
+		&i.PreviewMediaID,
 	)
 	return i, err
 }

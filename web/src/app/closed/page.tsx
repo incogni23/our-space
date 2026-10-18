@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Loading, Screen } from "@/components/ui";
-import { formatDay, homeFor, markNoticeSeen, type Notice } from "@/lib/api";
+import { Button, ButtonLink, Card, Loading, Screen } from "@/components/ui";
+import { EXPORT_URL, formatDay, homeFor, markNoticeSeen, type Notice } from "@/lib/api";
 import { useMe } from "@/lib/use-me";
 
 type Closed = Extract<Notice, { kind: "space_closed" }>;
@@ -54,7 +54,17 @@ export default function SpaceClosed() {
       ) : null}
 
       <div className="mt-auto flex flex-col gap-2.5">
-        <Button onClick={done} loading={busy}>
+        {stillReadable ? (
+          <>
+            <a href={EXPORT_URL} className="flex min-h-[52px] items-center justify-center rounded-(--radius-card) bg-action text-base font-medium text-action-text no-underline">
+              Download a copy
+            </a>
+            <ButtonLink href="/space" variant="secondary">
+              Look back through it
+            </ButtonLink>
+          </>
+        ) : null}
+        <Button variant={stillReadable ? "text" : "primary"} onClick={done} loading={busy}>
           Got it
         </Button>
       </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Card, ErrorText, Frames, Loading, Screen, Stamp } from "@/components/ui";
-import { api, errorMessage, homeFor, partnerOf } from "@/lib/api";
+import { EXPORT_URL, api, errorMessage, homeFor, partnerOf } from "@/lib/api";
 import { useMe } from "@/lib/use-me";
 
 const chevron = (
@@ -98,6 +98,22 @@ export default function Settings() {
           </Card>
         ) : null}
       </section>
+
+      {space?.status === "active" ? (
+        <section className="flex flex-col gap-2">
+          <Stamp>Your data</Stamp>
+          <a
+            href={EXPORT_URL}
+            className="flex min-h-[60px] items-center gap-3 rounded-(--radius-card) border border-line bg-surface px-3.5 py-2.5 text-ink no-underline"
+          >
+            <span className="flex flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-medium">Download a copy</span>
+              <span className="text-[13px] text-muted">Boards, plans, Our Story and photos, as a zip</span>
+            </span>
+            {chevron}
+          </a>
+        </section>
+      ) : null}
 
       {space ? (
         <section className="flex flex-col gap-2">

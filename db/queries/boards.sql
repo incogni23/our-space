@@ -67,3 +67,34 @@ INSERT INTO pin_notes (pin_id, author_id, body) VALUES ($1, $2, $3) RETURNING *;
 
 -- name: SetTimeZone :exec
 UPDATE users SET time_zone = $2, updated_at = now() WHERE id = $1;
+
+-- name: SetPinPreviewPending :exec
+UPDATE pins SET preview_status = 'pending' WHERE id = $1;
+
+-- name: SetPinPreview :exec
+-- Fills the preview; replaces the title only if it is still the default (the host name).
+UPDATE pins SET
+    preview_status = sqlc.arg(status),
+    preview_site = sqlc.arg(site),
+    preview_description = sqlc.arg(description),
+    preview_media_id = sqlc.narg(media_id),
+    title = CASE WHEN title = sqlc.arg(default_title)::text AND sqlc.arg(new_title)::text <> '' THEN sqlc.arg(new_title)::text ELSE title END,
+    updated_at = now()
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: ReadableSpaceFor :one
+-- The space a user may read: their active space, or a closed one still inside its
+-- read-only window (both former members can read and download until then).
+SELECT r.id, r.name, r.status, r.read_only_until FROM relationship_members rm
+JOIN relationships r ON r.id = rm.relationship_id
+WHERE rm.user_id = $1
+  AND ((rm.left_at IS NULL AND r.status = 'active')
+    OR (r.status = 'unlinked' AND r.read_only_until > now()))
+ORDER BY (r.status = 'active') DESC, r.unlinked_at DESC NULLS LAST
+LIMIT 1;
+
+-- name: MembersOf :many
+-- Everyone who was ever in the space (for read-only views after it closed).
+SELECT u.id, u.display_name, u.person_tint, u.time_zone
+FROM relationship_members rm JOIN users u ON u.id = rm.user_id
+WHERE rm.relationship_id = $1 ORDER BY rm.joined_at;

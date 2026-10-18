@@ -6,8 +6,11 @@ import { useLiveTick } from "./live";
 import { homeFor, partnerOf } from "./api";
 import { useMe } from "./use-me";
 
-/** For pages inside an active space: sends everyone else to where they belong. */
-export function useSpace() {
+/**
+ * For pages inside a space: an active one, or a closed one during its read-only
+ * window (`readOnly`). Sends everyone else to where they belong.
+ */
+export function useSpace(opts: { write?: boolean } = {}) {
   const router = useRouter();
   const state = useMe();
   const { me, reload } = state;
@@ -15,11 +18,16 @@ export function useSpace() {
   useEffect(() => {
     if (spaceTick) void reload();
   }, [spaceTick, reload]);
+  const active = !!me && me.space?.status === "active";
+  const readOnly = !!me && !me.space && !!me.readOnlySpace;
   useEffect(() => {
-    if (me && me.space?.status !== "active") router.replace(homeFor(me));
-  }, [me, router]);
-  const ready = !!me && me.space?.status === "active";
-  const partner = me ? partnerOf(me) : undefined;
+    if (!me) return;
+    if (readOnly && opts.write) router.replace("/space");
+    else if (!active && !readOnly) router.replace(homeFor(me));
+  }, [me, router, active, readOnly, opts.write]);
+  const ready = active || (readOnly && !opts.write);
+  const partner = me ? (active ? partnerOf(me) : me.readOnlySpace?.members.find((m) => m.id !== me.user.id)) : undefined;
   const people = me ? [me.user, ...(partner ? [partner] : [])] : [];
-  return { ...state, ready, partner, people };
+  const spaceName = me?.space?.name ?? me?.readOnlySpace?.name ?? "";
+  return { ...state, ready, readOnly, partner, people, spaceName };
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
+import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { PlanRow } from "@/components/plan-row";
 import { ButtonLink, ErrorText, Loading, Screen, Title, cx } from "@/components/ui";
 import { api, errorMessage, type Plan } from "@/lib/api";
@@ -13,7 +14,7 @@ type Occ = { plan: Plan; at: string };
 
 // D3 · Plans: Coming up, and a month view.
 export default function Plans() {
-  const { ready, me, partner } = useSpace();
+  const { ready, me, partner, readOnly, spaceName } = useSpace();
   const tick = useLiveTick(["plan."], ready);
   const [plans, setPlans] = useState<Plan[] | null>(null);
   const [view, setView] = useState<"up" | "month">("up");
@@ -76,13 +77,17 @@ export default function Plans() {
     <Screen className="gap-4 px-4 pb-[120px] pt-14">
       <div className="flex items-center justify-between">
         <Title className="text-[34px]">Plans</Title>
+        {readOnly ? null : (
         <ButtonLink href="/plans/new" className="min-h-11 w-auto px-3.5 text-sm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
           </svg>
           Plan something
         </ButtonLink>
+        )}
       </div>
+
+      {readOnly ? <ReadOnlyBanner name={spaceName} until={me.readOnlySpace?.until} /> : null}
 
       <div role="radiogroup" aria-label="View" className="grid grid-cols-2 rounded-(--radius-control) bg-sunken p-[3px]">
         {(["up", "month"] as const).map((v) => (
@@ -198,7 +203,7 @@ export default function Plans() {
         </div>
       )}
 
-      <BottomNav current="plans" />
+      <BottomNav current="plans" readOnly={readOnly} />
     </Screen>
   );
 }

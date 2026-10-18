@@ -73,7 +73,7 @@ function TabLink({ t, current }: { t: (typeof tabs)[number]; current: Tab }) {
 }
 
 /** Fixed bottom bar (4.4). Pages using it need bottom padding of ~120px. */
-export function BottomNav({ current }: { current: Tab }) {
+export function BottomNav({ current, readOnly = false }: { current: Tab; readOnly?: boolean }) {
   return (
     <nav
       aria-label="Main"
@@ -82,6 +82,9 @@ export function BottomNav({ current }: { current: Tab }) {
       <div className="mx-auto flex max-w-[440px] items-center justify-around px-2.5">
         <TabLink t={tabs[0]} current={current} />
         <TabLink t={tabs[1]} current={current} />
+        {readOnly ? (
+          <span className="size-[52px]" aria-hidden="true" />
+        ) : (
         <Link
           href="/add"
           aria-label="Save something"
@@ -91,6 +94,7 @@ export function BottomNav({ current }: { current: Tab }) {
             <path d="M12 5v14M5 12h14" />
           </svg>
         </Link>
+        )}
         <TabLink t={tabs[2]} current={current} />
         <TabLink t={tabs[3]} current={current} />
       </div>
