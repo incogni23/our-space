@@ -109,7 +109,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 const createRelationship = `-- name: CreateRelationship :one
 INSERT INTO relationships (name, created_by)
 VALUES ($1, $2)
-RETURNING id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until
+RETURNING id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at
 `
 
 type CreateRelationshipParams struct {
@@ -130,6 +130,7 @@ func (q *Queries) CreateRelationship(ctx context.Context, arg CreateRelationship
 		&i.UnlinkedAt,
 		&i.UnlinkedBy,
 		&i.ReadOnlyUntil,
+		&i.PurgedAt,
 	)
 	return i, err
 }
@@ -271,7 +272,7 @@ func (q *Queries) GetLatestInvitation(ctx context.Context, relationshipID uuid.U
 }
 
 const getRelationshipForUpdate = `-- name: GetRelationshipForUpdate :one
-SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until FROM relationships WHERE id = $1 FOR UPDATE
+SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at FROM relationships WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (Relationship, error) {
@@ -287,6 +288,7 @@ func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (R
 		&i.UnlinkedAt,
 		&i.UnlinkedBy,
 		&i.ReadOnlyUntil,
+		&i.PurgedAt,
 	)
 	return i, err
 }

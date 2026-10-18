@@ -22,6 +22,7 @@ type planJSON struct {
 	StartsAt          time.Time   `json:"startsAt"`
 	AnchorTz          string      `json:"anchorTz"`
 	Repeat            string      `json:"repeat"`
+	Remind            string      `json:"remind"`
 	Status            string      `json:"status"`
 	SuggestedStartsAt *time.Time  `json:"suggestedStartsAt,omitempty"`
 	SuggestedBy       *string     `json:"suggestedBy,omitempty"`
@@ -41,7 +42,7 @@ func idPtr(u *uuid.UUID) *string {
 func toPlan(p store.Plan, occ []time.Time) planJSON {
 	return planJSON{
 		ID: p.ID.String(), CreatedBy: p.CreatedBy.String(), PinID: idPtr(p.PinID), Kind: p.Kind, Title: p.Title,
-		Place: p.Place, Notes: p.Notes, StartsAt: p.StartsAt, AnchorTz: p.AnchorTz, Repeat: p.Repeat, Status: p.Status,
+		Place: p.Place, Notes: p.Notes, StartsAt: p.StartsAt, AnchorTz: p.AnchorTz, Repeat: p.Repeat, Remind: p.Remind, Status: p.Status,
 		SuggestedStartsAt: p.SuggestedStartsAt, SuggestedBy: idPtr(p.SuggestedBy), RespondedBy: idPtr(p.RespondedBy),
 		CreatedAt: p.CreatedAt, Occurrences: occ,
 	}
@@ -109,13 +110,14 @@ func (s *Server) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 		Notes        string  `json:"notes"`
 		PinID        *string `json:"pinId"`
 		AskToConfirm bool    `json:"askToConfirm"`
+		Remind       string  `json:"remind"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
 	np := plans.NewPlan{
 		Title: in.Title, Local: in.Local, TimeZone: in.TimeZone, Kind: in.Kind, Repeat: in.Repeat,
-		Place: in.Place, Notes: in.Notes, AskToConfirm: in.AskToConfirm,
+		Place: in.Place, Notes: in.Notes, AskToConfirm: in.AskToConfirm, Remind: in.Remind,
 	}
 	if in.PinID != nil && *in.PinID != "" {
 		id, ok := parseUUID(w, *in.PinID)
@@ -192,12 +194,13 @@ func (s *Server) handleUpdatePlan(w http.ResponseWriter, r *http.Request) {
 		Local    string `json:"local"`
 		TimeZone string `json:"timeZone"`
 		Repeat   string `json:"repeat"`
+		Remind   string `json:"remind"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
 	p, err := s.plans.Update(r.Context(), sc, id, plans.Edit{
-		Title: in.Title, Place: in.Place, Notes: in.Notes, Local: in.Local, TimeZone: in.TimeZone, Repeat: in.Repeat,
+		Title: in.Title, Place: in.Place, Notes: in.Notes, Local: in.Local, TimeZone: in.TimeZone, Repeat: in.Repeat, Remind: in.Remind,
 	})
 	if err != nil {
 		s.domainError(w, r, err)

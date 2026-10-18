@@ -88,3 +88,8 @@ func (s *Service) Open(ctx context.Context, spaceID, id uuid.UUID, variant strin
 func (s *Service) OpenKey(ctx context.Context, key string) (io.ReadCloser, error) {
 	return s.blobs.Get(ctx, key)
 }
+
+// DeleteKey removes a stored object (used when a closed space is purged).
+func (s *Service) DeleteKey(ctx context.Context, key string) error {
+	return s.blobs.Delete(ctx, key)
+}

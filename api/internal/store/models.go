@@ -20,6 +20,20 @@ type Board struct {
 	ArchivedAt     *time.Time
 }
 
+type Job struct {
+	ID          int64
+	Kind        string
+	Payload     []byte
+	RunAt       time.Time
+	Attempts    int32
+	MaxAttempts int32
+	LockedUntil *time.Time
+	LastError   *string
+	DoneAt      *time.Time
+	CreatedAt   time.Time
+	DedupeKey   *string
+}
+
 type Medium struct {
 	ID             uuid.UUID
 	RelationshipID uuid.UUID
@@ -53,6 +67,23 @@ type MemoryMedium struct {
 	MemoryID uuid.UUID
 	MediaID  uuid.UUID
 	Position int32
+}
+
+type Note struct {
+	ID             uuid.UUID
+	RelationshipID uuid.UUID
+	AuthorID       uuid.UUID
+	RecipientID    uuid.UUID
+	Body           string
+	State          string
+	DeliverAt      *time.Time
+	DeliverTz      *string
+	DeliveredAt    *time.Time
+	OpenedAt       *time.Time
+	Kept           bool
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      *time.Time
 }
 
 type PhoneVerification struct {
@@ -118,6 +149,7 @@ type Plan struct {
 	RespondedAt       *time.Time
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	Remind            string
 }
 
 type RecoveryCode struct {
@@ -137,6 +169,7 @@ type Relationship struct {
 	UnlinkedAt    *time.Time
 	UnlinkedBy    *uuid.UUID
 	ReadOnlyUntil *time.Time
+	PurgedAt      *time.Time
 }
 
 type RelationshipInvitation struct {

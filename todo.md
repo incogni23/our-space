@@ -29,7 +29,7 @@ Design tokens: `design/tokens.json`, `design/tokens.css` (v0.1, match canvas 4.1
 | DB access | pgx v5 + sqlc |
 | Migrations | goose (SQL files in `db/migrations`) |
 | Real-time | Server-Sent Events + Postgres LISTEN/NOTIFY for space updates; WebSockets later for Together sessions |
-| Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) |
+| Jobs | Postgres-backed durable jobs (`jobs` table, `SKIP LOCKED`) — `api/internal/jobs` |
 | Media | S3-compatible object storage (MinIO locally) |
 | Calls | Managed WebRTC (later) |
 | Deploy | Managed containers |
@@ -114,22 +114,27 @@ Onboarding UI (A1–A8)
 - [ ] Awake hours (A8) + "both usually awake" overlap on B1
 - [x] Plans (D1–D3): plan from a pin (pin → planned), meet-up or call, both clocks with day labels, weekly repeat on the anchor zone's wall clock, DST notes, invite to confirm → accept / suggest another time / decline, edit, cancel, .ics export, month view, "Next together" on B1
 - [ ] Trips (partner's travel dates → "you're both in Bengaluru that day", countdown on B1)
-- [ ] Plan reminders (needs the job runner, Phase 3)
+- [x] Plan reminders (Phase 3)
 - [x] Our Story timeline (E0): moments, trips, a change, where it started; year sections; filters; memory detail; add a memory with photos
 - [ ] "A year ago this weekend" card on B1 · "Made" filter (Phase 4)
 - [x] Photo upload: server re-encodes every photo (orientation applied, GPS and all metadata removed, display copy + thumbnail), served only to members via the API; local folder or any S3-compatible store (MinIO/S3/R2)
 - [ ] Photo pins on boards · resumable uploads · video
 - [x] Read-only access to a closed space until `read_only_until` (both former members); write actions hidden; "Download a copy" zip export (also in Settings)
-- [ ] Delete closed spaces' content after `read_only_until` (needs the job runner, Phase 3)
+- [x] Delete closed spaces' content after `read_only_until` (Phase 3 job runner)
 - [x] Live updates: Server-Sent Events per space, fanned out through Postgres LISTEN/NOTIFY (multi-instance safe); boards, pins, notes, plans, memories, partner joined, space closed. Events carry what changed, never presence
 - [ ] WebSockets for Together sessions (Phase 5)
 - [ ] Offline outbox ("Waiting to send", never claims sent) → moved to Phase 5 with the PWA/service worker
 
-## Phase 3 · Notes & rituals (week 5)  ← next
+## Phase 3 · Notes & rituals (week 5)  ✓ done
 
-- [ ] Scheduled notes: recipient sees only who + when until open time; sender sees Scheduled → Delivered, never Opened
-- [ ] Durable job runner for reminders and note delivery
-- [ ] Push only for things with a time; quiet in-app banners otherwise
+- [x] Durable job runner on Postgres (SKIP LOCKED, backoff, enqueued inside the caller's transaction, dedupe keys)
+- [x] Scheduled notes (NoteLetter 4.3): draft · scheduled · waiting (sealed: who and when only) · delivered; body never sent to the recipient before delivery; author sees "Delivered", never "Opened"; keep; take back
+- [x] "Tomorrow morning" = 7:00 their time; pick a time in their time or yours
+- [x] Plan reminders: the evening before (8 pm in each person's own zone) or an hour before; rescheduled with every change; weekly plans roll forward; in-app notice
+- [x] Closed spaces purged when the read-only window ends (content, photos, blobs)
+- [x] Link previews moved onto the job runner
+- [ ] Web Push for things with a time (notes opening, reminders) — needs the PWA/service worker (Phase 5)
+- [ ] Email receipts/notifications (provider TBD)
 
 ## Phase 4 · Made by Us (week 6)
 

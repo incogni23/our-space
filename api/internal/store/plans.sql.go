@@ -22,7 +22,7 @@ UPDATE plans SET
     responded_at = now(),
     updated_at = now()
 WHERE id = $1 AND relationship_id = $2 AND suggested_starts_at IS NOT NULL
-RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at
+RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind
 `
 
 type AcceptSuggestionParams struct {
@@ -53,6 +53,7 @@ func (q *Queries) AcceptSuggestion(ctx context.Context, arg AcceptSuggestionPara
 		&i.RespondedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Remind,
 	)
 	return i, err
 }
@@ -78,7 +79,7 @@ func (q *Queries) CancelPlan(ctx context.Context, arg CancelPlanParams) (int64, 
 const createPlan = `-- name: CreatePlan :one
 INSERT INTO plans (relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at
+RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind
 `
 
 type CreatePlanParams struct {
@@ -129,6 +130,7 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, e
 		&i.RespondedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Remind,
 	)
 	return i, err
 }
@@ -138,7 +140,7 @@ UPDATE plans SET
     title = $3, place = $4, notes = $5, starts_at = $6, anchor_tz = $7, repeat = $8, status = $9,
     suggested_starts_at = NULL, suggested_by = NULL, updated_at = now()
 WHERE id = $1 AND relationship_id = $2
-RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at
+RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind
 `
 
 type EditPlanParams struct {
@@ -185,12 +187,13 @@ func (q *Queries) EditPlan(ctx context.Context, arg EditPlanParams) (Plan, error
 		&i.RespondedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Remind,
 	)
 	return i, err
 }
 
 const getPlan = `-- name: GetPlan :one
-SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at FROM plans WHERE id = $1 AND relationship_id = $2
+SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind FROM plans WHERE id = $1 AND relationship_id = $2
 `
 
 type GetPlanParams struct {
@@ -220,12 +223,13 @@ func (q *Queries) GetPlan(ctx context.Context, arg GetPlanParams) (Plan, error) 
 		&i.RespondedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Remind,
 	)
 	return i, err
 }
 
 const getPlanForUpdate = `-- name: GetPlanForUpdate :one
-SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at FROM plans WHERE id = $1 AND relationship_id = $2 FOR UPDATE
+SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind FROM plans WHERE id = $1 AND relationship_id = $2 FOR UPDATE
 `
 
 type GetPlanForUpdateParams struct {
@@ -255,12 +259,13 @@ func (q *Queries) GetPlanForUpdate(ctx context.Context, arg GetPlanForUpdatePara
 		&i.RespondedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Remind,
 	)
 	return i, err
 }
 
 const livePlans = `-- name: LivePlans :many
-SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at FROM plans
+SELECT id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind FROM plans
 WHERE relationship_id = $1 AND status IN ('proposed', 'confirmed')
   AND ((repeat = 'none' AND starts_at >= $2 AND starts_at < $3)
     OR (repeat = 'weekly' AND starts_at < $3))
@@ -302,6 +307,7 @@ func (q *Queries) LivePlans(ctx context.Context, arg LivePlansParams) ([]Plan, e
 			&i.RespondedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Remind,
 		); err != nil {
 			return nil, err
 		}
@@ -337,7 +343,7 @@ UPDATE plans SET
     suggested_by = $6,
     updated_at = now()
 WHERE id = $1 AND relationship_id = $2
-RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at
+RETURNING id, relationship_id, created_by, pin_id, kind, title, place, notes, starts_at, anchor_tz, repeat, status, suggested_starts_at, suggested_by, responded_by, responded_at, created_at, updated_at, remind
 `
 
 type RespondToPlanParams struct {
@@ -378,6 +384,7 @@ func (q *Queries) RespondToPlan(ctx context.Context, arg RespondToPlanParams) (P
 		&i.RespondedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Remind,
 	)
 	return i, err
 }

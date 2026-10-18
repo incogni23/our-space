@@ -14,7 +14,7 @@ export function useSpace(opts: { write?: boolean } = {}) {
   const router = useRouter();
   const state = useMe();
   const { me, reload } = state;
-  const spaceTick = useLiveTick(["space."], !!me?.space);
+  const spaceTick = useLiveTick(["space.", "notice.", "note.delivered"], !!me?.space);
   useEffect(() => {
     if (spaceTick) void reload();
   }, [spaceTick, reload]);
