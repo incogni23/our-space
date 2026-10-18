@@ -219,28 +219,40 @@ func (s *Service) List(ctx context.Context, sc Scope) ([]View, error) {
 
 // Get returns one note. Opening a delivered note as its recipient marks it read;
 // firstRead reports that this call did so (the author is then told).
-func (s *Service) Get(ctx context.Context, sc Scope, id uuid.UUID) (v View, firstRead bool, err error) {
+func (s *Service) Get(ctx context.Context, sc Scope, id uuid.UUID) (View, error) {
 	q := store.New(s.pool)
 	n, err := q.GetNote(ctx, store.GetNoteParams{ID: id, RelationshipID: sc.SpaceID})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return View{}, false, ErrNotFound
+		return View{}, ErrNotFound
 	}
+	if err != nil {
+		return View{}, err
+	}
+	if n.AuthorID != sc.UserID && n.RecipientID != sc.UserID {
+		return View{}, ErrNotFound
+	}
+	if n.RecipientID == sc.UserID && n.State == "draft" {
+		return View{}, ErrNotFound
+	}
+	return view(n, sc.UserID), nil
+}
+
+// Open records that the recipient broke the seal: this is the moment the writer
+// sees as "Read". Opening twice keeps the first time.
+func (s *Service) Open(ctx context.Context, sc Scope, id uuid.UUID) (v View, firstRead bool, err error) {
+	v, err = s.Get(ctx, sc, id)
 	if err != nil {
 		return View{}, false, err
 	}
-	if n.AuthorID != sc.UserID && n.RecipientID != sc.UserID {
-		return View{}, false, ErrNotFound
+	if v.Mine || v.State != "delivered" || (v.Opened != nil && *v.Opened) {
+		return v, false, nil
 	}
-	if n.RecipientID == sc.UserID && n.State == "draft" {
-		return View{}, false, ErrNotFound
+	if err := store.New(s.pool).OpenNote(ctx, store.OpenNoteParams{ID: id, RecipientID: sc.UserID}); err != nil {
+		return View{}, false, err
 	}
-	v = view(n, sc.UserID)
-	if n.RecipientID == sc.UserID && n.State == "delivered" && n.OpenedAt == nil {
-		if err := q.OpenNote(ctx, store.OpenNoteParams{ID: id, RecipientID: sc.UserID}); err == nil {
-			firstRead = true
-		}
-	}
-	return v, firstRead, nil
+	opened := true
+	v.Opened = &opened
+	return v, true, nil
 }
 
 func (s *Service) Keep(ctx context.Context, sc Scope, id uuid.UUID, keep bool) error {

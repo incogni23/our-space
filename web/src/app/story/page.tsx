@@ -2,36 +2,92 @@
 /* eslint-disable @next/next/no-img-element -- photos come from our authenticated API, not next/image */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
+import { Film, Kicker } from "@/components/print";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
-import { Avatar, ButtonLink, ErrorText, Loading, Screen, cx } from "@/components/ui";
+import { ButtonLink, ErrorText, Loading, PrintTitle, Rule, Screen, cx } from "@/components/ui";
 import { api, errorMessage, photoUrl, type Memory } from "@/lib/api";
-import { useSpace } from "@/lib/use-space";
+import { issueOf, issueNoFor, sinceOf } from "@/lib/issue";
 import { useLiveTick } from "@/lib/live";
+import { inkColor } from "@/lib/theme";
+import { useSpace } from "@/lib/use-space";
 
-type Filter = "all" | "trip" | "moment";
+type Style = "photo" | "accent" | "paper" | "petal";
+const STYLES: Style[] = ["accent", "paper", "photo", "petal"];
 
-const monthDay = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" }).toUpperCase();
+const look: Record<Style, { box: string; fg: string; mast: string; img: string; shadow: boolean }> = {
+  photo: { box: "bg-[#151112]", fg: "text-[#FFFDF9]", mast: "text-[#FFFDF9]", img: "inset-0 size-full", shadow: true },
+  accent: { box: "bg-accent", fg: "text-on-accent", mast: "text-on-accent", img: "inset-x-[10%] top-[22%] h-1/2 w-4/5 mix-blend-multiply", shadow: false },
+  paper: { box: "border-[1.5px] border-ink bg-paper", fg: "text-ink", mast: "text-accent-ink", img: "inset-x-[12%] top-[24%] h-[46%] w-[76%]", shadow: false },
+  petal: { box: "bg-petal", fg: "text-ink", mast: "text-accent-ink", img: "inset-x-[8%] top-[20%] h-1/2 w-[84%]", shadow: false },
+};
 
-function dateStamp(m: Memory): string {
-  if (m.endsOn && m.endsOn !== m.happenedOn) {
-    const a = new Date(`${m.happenedOn}T12:00:00Z`);
-    const b = new Date(`${m.endsOn}T12:00:00Z`);
-    if (a.getUTCMonth() === b.getUTCMonth()) {
-      return `${a.getUTCDate()}–${b.getUTCDate()} ${b.toLocaleDateString(undefined, { month: "short", timeZone: "UTC" }).toUpperCase()}`;
-    }
-    return `${monthDay(m.happenedOn)} – ${monthDay(m.endsOn)}`;
-  }
-  return monthDay(m.happenedOn);
+type Issue = { no: number; month: string; year: string; items: Memory[]; lead?: Memory };
+
+const monthLabel = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { month: "short", year: "numeric" }).toUpperCase();
+const stampDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" }).replace(/\//g, " · ");
+
+/** The memory that makes the cover: a trip with photos beats a moment with photos beats the rest. */
+function coverOf(items: Memory[]): Memory | undefined {
+  const score = (m: Memory) => (m.coverId ? 2 : 0) + (m.kind === "trip" ? 1 : 0) + Math.min(m.photoCount, 9) / 10;
+  return [...items].sort((a, b) => score(b) - score(a))[0];
 }
 
-// E0 · Our Story
+function Cover({ issue, style, name, big, rot = 0, now, onPick }: { issue: Issue; style: Style; name: string; big?: boolean; rot?: number; now?: boolean; onPick: () => void }) {
+  const l = look[style];
+  const lead = issue.lead;
+  const shadow = l.shadow ? "[text-shadow:0_1px_12px_rgba(0,0,0,0.55)]" : "";
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      aria-label={`Issue ${issue.no}, ${issue.month}${lead ? `: ${lead.title}` : ""}`}
+      className={cx("relative block w-full cursor-pointer overflow-hidden text-left", big ? "h-[380px]" : "h-[230px]", l.box, l.fg, "shadow-[0_16px_26px_-16px_rgba(0,0,0,0.55)]")}
+      style={{ transform: rot ? `rotate(${rot}deg)` : undefined }}
+    >
+      {lead?.coverId ? (
+        <img src={photoUrl(lead.coverId, big ? "full" : "thumb")} alt="" className={cx("bw absolute object-cover", l.img)} />
+      ) : (
+        <Film seed={issue.no} className={cx("absolute", l.img)} />
+      )}
+      <div className={cx("absolute inset-0 flex flex-col justify-between", big ? "p-4" : "p-2.5")}>
+        <div className="flex items-start justify-between gap-1.5">
+          <span className={cx("font-display font-black italic leading-[0.85]", big ? "text-[38px]" : "text-xl", l.mast, shadow)}>{name}</span>
+          <span className={cx("text-right font-type uppercase leading-normal", big ? "text-[10.5px] tracking-[0.14em]" : "text-[9px] tracking-[0.12em]", shadow)}>
+            Nº {issue.no}
+            {big ? (
+              <>
+                <br />
+                {issue.month}
+              </>
+            ) : null}
+          </span>
+        </div>
+        <div className={cx("flex flex-col gap-0.5", shadow)}>
+          {now ? (
+            <span className="-rotate-3 self-start bg-paper px-2 py-1 font-type text-[10px] font-bold tracking-[0.14em] text-accent-ink [text-shadow:none]">
+              THIS MONTH · STILL BEING WRITTEN
+            </span>
+          ) : null}
+          {!big ? <span className="font-type text-[9.5px] tracking-[0.14em]">{issue.month}</span> : null}
+          <span className={cx("font-display font-bold leading-[0.95]", big ? "text-[42px] tracking-[-0.01em]" : "line-clamp-3 text-[19px]")}>
+            {lead ? lead.title : now ? `${new Date().toLocaleDateString("en-GB", { month: "long" })}, so far` : "A quiet month"}
+          </span>
+          {big && lead?.caption ? <span className="line-clamp-2 font-hand text-2xl leading-none">{lead.caption}</span> : null}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// E0 · Our Story, v2: back issues, one per monthsary.
 export default function Story() {
   const { ready, people, readOnly, spaceName, me } = useSpace();
   const tick = useLiveTick(["memory."], ready);
   const [memories, setMemories] = useState<Memory[] | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [year, setYear] = useState<string | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,179 +97,174 @@ export default function Story() {
       .catch((e) => setError(errorMessage(e)));
   }, [ready, tick]);
 
+  const activatedAt = me?.space?.activatedAt;
+  const since = sinceOf(activatedAt, memories ?? []);
+  const current = issueOf(since);
+
+  const issues = useMemo(() => {
+    const byNo = new Map<number, Issue>();
+    for (const m of memories ?? []) {
+      if (m.kind === "change" || m.kind === "start") continue;
+      const no = issueNoFor(since, `${m.happenedOn}T12:00:00`);
+      const it = byNo.get(no) ?? { no, month: monthLabel(m.happenedOn), year: m.happenedOn.slice(0, 4), items: [] };
+      it.items.push(m);
+      byNo.set(no, it);
+    }
+    if (!byNo.has(current.no)) {
+      const d = new Date();
+      byNo.set(current.no, { no: current.no, month: monthLabel(d.toISOString().slice(0, 10)), year: String(d.getFullYear()), items: [] });
+    }
+    return [...byNo.values()].map((i) => ({ ...i, lead: coverOf(i.items) })).sort((a, b) => b.no - a.no);
+  }, [memories, since, current.no]);
+
   if (!ready || (memories === null && !error)) return <Loading />;
 
-  const shown = (memories ?? []).filter((m) => filter === "all" || m.kind === filter || (filter === "moment" && m.kind !== "trip"));
-  const years: Array<{ year: string; items: Memory[] }> = [];
-  for (const m of shown) {
-    const y = m.happenedOn.slice(0, 4);
-    const last = years[years.length - 1];
-    if (last && last.year === y) last.items.push(m);
-    else years.push({ year: y, items: [m] });
-  }
-  const tintBorder = (id: string) => {
-    const t = people.find((p) => p.id === id)?.personTint;
-    return t === "sage" ? "border-sage" : t === "mauve" ? "border-mauve" : "border-terracotta";
-  };
+  const years = [...new Set(issues.map((i) => i.year))];
+  const y = year && years.includes(year) ? year : years[0];
+  const inYear = issues.filter((i) => i.year === y);
+  const lead = inYear.find((i) => i.no === picked) ?? inYear[0];
+  const rest = inYear.filter((i) => i !== lead);
+  const firsts = (memories ?? []).filter((m) => m.kind === "start" || m.kind === "change").sort((a, b) => a.happenedOn.localeCompare(b.happenedOn));
+  const name = spaceName || "Us";
+  const sinceLabel = since ? new Date(since).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).toUpperCase() : "";
+  const inkOf = (id: string) => inkColor(people.find((p) => p.id === id)?.ink ?? (id === me?.user.id ? "accent" : "second"));
 
   return (
-    <Screen className="gap-4 px-4 pb-[120px] pt-14">
-      <div className="flex items-center justify-between">
-        <h1 className="m-0 font-display text-[34px] font-normal leading-[1.05]">Our Story</h1>
-        {readOnly ? null : (
-          <ButtonLink href="/story/new" className="min-h-11 w-auto px-3.5 text-sm">
-            Add a memory
-          </ButtonLink>
-        )}
-      </div>
+    <Screen wide className="gap-4 px-4 pb-[120px] pt-[50px]">
+      <header className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <span className="font-type text-[11px] tracking-[0.16em] text-muted">THE ARCHIVE</span>
+          {readOnly ? null : (
+            <Link href="/story/new" className="flex min-h-11 items-center text-[13px] font-medium text-accent-ink">
+              + Add a memory
+            </Link>
+          )}
+        </div>
+        <PrintTitle className="text-[56px] leading-[0.88]">Our Story</PrintTitle>
+        <span className="origin-left -rotate-[1.5deg] font-hand text-2xl text-accent-ink">a new issue every monthsary</span>
+        <Rule className="mt-1.5">
+          <span>
+            {current.no} {current.no === 1 ? "issue" : "issues"}
+          </span>
+          {sinceLabel ? <span>Since {sinceLabel}</span> : null}
+          <span className="text-accent-ink">{current.days} days</span>
+        </Rule>
+      </header>
 
       {readOnly ? <ReadOnlyBanner name={spaceName} until={me?.readOnlySpace?.until} /> : null}
 
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Filter">
-        {([
-          ["all", "All"],
-          ["trip", "Trips"],
-          ["moment", "Moments"],
-        ] as const).map(([f, label]) => (
-          <button
-            key={f}
-            type="button"
-            role="radio"
-            aria-checked={filter === f}
-            onClick={() => setFilter(f)}
-            className={cx(
-              "min-h-[38px] rounded-[10px] border px-3.5 text-[13px] font-medium",
-              filter === f ? "border-action bg-action text-action-text" : "border-line bg-surface text-ink",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-        <Link href="/made" className="flex min-h-[38px] items-center rounded-[10px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink no-underline">
-          Made
-        </Link>
-      </div>
+      {years.length > 1 ? (
+        <div role="radiogroup" aria-label="Year" className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(years.length, 4)}, minmax(0, 1fr))` }}>
+          {years.slice(0, 4).map((yr) => (
+            <button
+              key={yr}
+              type="button"
+              role="radio"
+              aria-checked={yr === y}
+              onClick={() => {
+                setYear(yr);
+                setPicked(null);
+              }}
+              className={cx("min-h-11 rounded-[22px] border-[1.5px] border-ink font-display text-lg font-bold italic", yr === y ? "bg-ink text-ground" : "bg-transparent text-ink")}
+            >
+              {yr}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <ErrorText>{error}</ErrorText>
 
-      {memories && memories.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 pt-8 text-center">
-          <div className="flex gap-4" aria-hidden="true">
-            <span className="h-[108px] w-[84px] rounded-lg border-[1.5px] border-dashed border-line-control" />
-            <span className="mt-[18px] h-[108px] w-[84px] rounded-lg border-[1.5px] border-dashed border-line-control" />
-          </div>
-          <h2 className="m-0 font-display text-2xl font-normal">Your story starts with any photo.</h2>
-          <p className="m-0 text-[15px] leading-[1.55] text-muted">It doesn’t have to be a good one. A screenshot counts.</p>
-          {readOnly ? null : (
-            <ButtonLink href="/story/new" className="mt-1">
-              Add a memory
-            </ButtonLink>
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-8">
+      {lead ? (
+        <div className="-rotate-1 lg:[&>button]:h-[520px]">
+          <Cover issue={lead} style={lead.no === current.no ? "accent" : "photo"} name={name} big now={lead.no === current.no} onPick={() => {}} />
+        </div>
+      ) : null}
+
+      {lead ? (
+        <section aria-label={`Inside Nº ${lead.no}`} className="flex flex-col gap-2">
+          <Kicker>Inside Nº {lead.no}</Kicker>
+          {lead.items.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 py-3 text-center">
+              <span className="font-display text-xl font-bold italic">Nothing in this issue yet.</span>
+              {readOnly ? null : (
+                <Link href="/story/new" className="font-hand text-[22px] text-accent-ink">
+                  add any photo. a screenshot counts.
+                </Link>
+              )}
+            </div>
+          ) : (
+            <ul className="m-0 flex list-none flex-col p-0">
+              {[...lead.items].sort((a, b) => a.happenedOn.localeCompare(b.happenedOn)).map((m) => (
+                <li key={m.id} className="border-b border-line last:border-b-0">
+                  <Link href={`/story/${m.id}`} className="flex min-h-16 items-center gap-3 py-2 text-ink no-underline">
+                    {m.coverId ? (
+                      <img src={photoUrl(m.coverId)} alt="" className="bw size-12 flex-none bg-paper object-cover p-[3px] shadow-[0_6px_12px_-8px_rgba(0,0,0,0.5)]" />
+                    ) : (
+                      <span className="size-12 flex-none bg-petal" aria-hidden="true" />
+                    )}
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="font-type text-[10px] uppercase tracking-[0.12em] text-muted">
+                        {stampDate(m.happenedOn)}
+                        {m.kind === "trip" ? " · trip" : ""}
+                        {m.place ? ` · ${m.place}` : ""}
+                      </span>
+                      <span className="truncate font-display text-lg font-bold leading-tight">{m.title}</span>
+                      {m.caption ? (
+                        <span className="truncate font-hand text-lg leading-none" style={{ color: inkOf(m.createdBy) }}>
+                          {m.caption}
+                        </span>
+                      ) : null}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-[22px_1fr] gap-x-3">
-          <div className="relative" style={{ gridRow: `span ${shown.length + years.length}` }}>
-            <div className="absolute bottom-0 left-2.5 top-2 w-[1.5px] bg-line" />
+        </section>
+      ) : null}
+      </div>
+
+      {rest.length ? (
+        <>
+          <Kicker>Back issues · {y}</Kicker>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3.5 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-7">
+            {rest.map((i, n) => (
+              <Cover key={i.no} issue={i} style={STYLES[(n + 1) % 4]} name={name} rot={[-1.5, 1.5, 1, -1][n % 4]} onPick={() => setPicked(i.no)} />
+            ))}
           </div>
-          {years.map((y) => (
-            <YearBlock key={y.year} year={y.year} items={y.items} people={people} tintBorder={tintBorder} />
-          ))}
-        </div>
-      )}
+        </>
+      ) : null}
+
+      {firsts.length ? (
+        <section aria-label="Firsts and changes" className="flex flex-col gap-2.5 pt-1.5">
+          <Kicker>Firsts &amp; changes</Kicker>
+          <div className="-mr-4 flex gap-2.5 overflow-x-auto pb-1.5 pr-4 pt-1">
+            {firsts.map((m) => (
+              <Link key={m.id} href={`/story/${m.id}`} className="flex w-32 flex-none flex-col gap-1 rounded bg-paper p-2.5 text-ink no-underline shadow-[0_10px_18px_-12px_rgba(0,0,0,0.5)]">
+                <span className={cx("font-type text-[9.5px] tracking-[0.12em]", m.kind === "start" ? "text-accent-ink" : "text-muted")}>{stampDate(m.happenedOn)}</span>
+                <span className="font-hand text-xl leading-none" style={{ color: inkOf(m.createdBy) }}>
+                  {m.caption || m.title}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="flex flex-col gap-2 lg:max-w-[420px]">
+        {!readOnly ? (
+          <ButtonLink href={lead?.lead ? `/made/new?memory=${lead.lead.id}` : "/made/new"} className="min-h-[52px] text-[15px]">
+            Make something from an issue
+          </ButtonLink>
+        ) : null}
+        <ButtonLink href="/made" variant="text">
+          Things we’ve made
+        </ButtonLink>
+      </div>
 
       <BottomNav current="story" readOnly={readOnly} />
     </Screen>
-  );
-}
-
-function YearBlock({
-  year,
-  items,
-  people,
-  tintBorder,
-}: {
-  year: string;
-  items: Memory[];
-  people: ReturnType<typeof useSpace>["people"];
-  tintBorder: (id: string) => string;
-}) {
-  return (
-    <>
-      <span className="pb-2.5 pt-1 font-display text-[22px] text-muted">{year}</span>
-      {items.map((m) => {
-        const by = people.find((p) => p.id === m.createdBy);
-        if (m.kind === "change") {
-          return (
-            <Link key={m.id} href={`/story/${m.id}`} className="relative mb-[22px] flex flex-col gap-1.5 rounded-(--radius-note) bg-sunken px-4 py-3.5 text-ink no-underline">
-              <span className="absolute -left-7 top-[18px] size-2 rounded-full border-[1.5px] border-ink bg-ground" />
-              <span className="font-stamp text-[10px] tracking-[0.1em] text-muted">{monthDay(m.happenedOn)} · A CHANGE</span>
-              <span className="font-display text-[19px] leading-[1.2]">{m.title}</span>
-              {m.caption ? <span className={cx("border-l-2 pl-2 font-display text-sm italic leading-[1.35]", tintBorder(m.createdBy))}>{m.caption}</span> : null}
-            </Link>
-          );
-        }
-        if (m.kind === "start") {
-          return (
-            <Link key={m.id} href={`/story/${m.id}`} className="relative mb-[22px] flex rounded-(--radius-card) bg-surface text-ink no-underline shadow-(--shadow-paper)">
-              <span className="absolute -left-[29px] top-[22px] size-2.5 rounded-[3px] bg-shared shadow-[0_0_0_4px_var(--bg-ground)]" />
-              <span className="flex flex-1 flex-col gap-1 px-4 py-3.5">
-                <span className="font-stamp text-[10px] tracking-[0.1em] text-shared-ink">{monthDay(m.happenedOn)} · WHERE IT STARTED</span>
-                <span className="font-display text-[19px] leading-[1.2]">{m.title}</span>
-                <span className="text-xs text-muted">
-                  Added by {by?.displayName ?? "you"}
-                  {m.caption ? ` · ${m.caption}` : ""}
-                </span>
-              </span>
-              {m.coverId ? (
-                <img src={photoUrl(m.coverId)} alt="" className="w-[70px] rounded-r-(--radius-card) border-l-[1.5px] border-dashed border-line object-cover" />
-              ) : (
-                <span className="w-[54px] border-l-[1.5px] border-dashed border-line" />
-              )}
-            </Link>
-          );
-        }
-        if (m.kind === "trip") {
-          return (
-            <Link key={m.id} href={`/story/${m.id}`} className="relative flex flex-col gap-2.5 pb-[22px] text-ink no-underline">
-              <span className="absolute -left-[29px] top-2.5 size-2.5 rounded-[3px] bg-shared shadow-[0_0_0_4px_var(--bg-ground)]" />
-              {m.coverId ? (
-                <span className="relative block h-[220px] overflow-hidden rounded-(--radius-card) bg-sunken">
-                  <img src={photoUrl(m.coverId, "full")} alt={m.caption || m.title} className="size-full object-cover" />
-                  {m.photoCount > 1 ? (
-                    <span className="absolute bottom-2.5 right-2.5 rounded bg-[rgba(46,35,41,0.6)] px-[7px] py-[3px] font-stamp text-[10px] text-[#FFFCF7]">+{m.photoCount - 1}</span>
-                  ) : null}
-                </span>
-              ) : null}
-              <span className="font-stamp text-[10px] tracking-[0.1em] text-muted">
-                {dateStamp(m)} · TRIP{m.photoCount ? ` · ${m.photoCount} PHOTO${m.photoCount === 1 ? "" : "S"}` : ""}
-              </span>
-              <span className="font-display text-2xl leading-[1.1]">{m.title}</span>
-              <span className="flex items-center justify-between gap-2.5">
-                {m.caption ? <span className="font-display text-[15px] italic text-muted">{m.caption}</span> : <span />}
-                {by ? <Avatar name={by.displayName} tint={by.personTint} size={22} /> : null}
-              </span>
-            </Link>
-          );
-        }
-        return (
-          <Link key={m.id} href={`/story/${m.id}`} className={cx("relative grid items-center gap-3.5 pb-6 text-ink no-underline", m.coverId ? "grid-cols-[124px_1fr]" : "grid-cols-1")}>
-            <span className="absolute -left-7 top-10 size-2 rounded-full bg-ink shadow-[0_0_0_4px_var(--bg-ground)]" />
-            {m.coverId ? (
-              <span className="-rotate-[1.5deg] rounded-(--radius-print) bg-surface px-1.5 pb-[18px] pt-1.5 shadow-(--shadow-lift)">
-                <img src={photoUrl(m.coverId)} alt={m.caption || m.title} className="block h-[90px] w-full object-cover" />
-              </span>
-            ) : null}
-            <span className="flex flex-col gap-[5px]">
-              <span className="font-stamp text-[10px] tracking-[0.1em] text-muted">
-                {monthDay(m.happenedOn)}
-                {m.place ? ` · ${m.place.toUpperCase()}` : ""}
-              </span>
-              <span className="font-display text-[19px] leading-[1.15]">{m.title}</span>
-              {m.caption ? <span className={cx("border-l-2 pl-2 font-display text-sm italic leading-[1.35]", tintBorder(m.createdBy))}>{m.caption}</span> : null}
-            </span>
-          </Link>
-        );
-      })}
-    </>
   );
 }

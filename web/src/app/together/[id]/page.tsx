@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SyncedPlayer, mediaLabel, mediaOf } from "@/components/synced-player";
 import { Avatar, Button, ErrorText, Loading, Screen, cx } from "@/components/ui";
 import { api, errorMessage, type TogetherSession } from "@/lib/api";
 import { useSpace } from "@/lib/use-space";
@@ -104,6 +105,7 @@ export default function TogetherRoom() {
   const pos = s.status === "playing" && serverNow >= startAt ? s.positionMs + (serverNow - startAt) : s.positionMs;
   const droppedByPartner = s.status === "paused" && s.pausedReason === "connection" && s.updatedBy !== me.user.id;
   const heldTooLong = s.status === "paused" && serverNow - startAt > 5 * 60_000 && !partnerHere;
+  const media = mediaOf(s.url);
 
   if (s.status === "ended") {
     return (
@@ -131,8 +133,10 @@ export default function TogetherRoom() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">{s.title}</h1>
-          {s.url ? (
+          <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">{s.title}</h1>
+          {media ? (
+            <span className="font-type text-[11px] uppercase tracking-[0.12em] text-[#C2B5AB]">{mediaLabel(media)} · plays here for both of you, in step</span>
+          ) : s.url ? (
             <a href={s.url} target="_blank" rel="noopener noreferrer" className="self-start text-sm font-medium text-[#DDA09D]">
               Open it in its own app →
             </a>
@@ -164,29 +168,42 @@ export default function TogetherRoom() {
           </div>
         ) : null}
 
-        <div className="flex flex-col items-center gap-3 rounded-[22px] bg-[rgba(243,235,225,0.06)] px-4 py-8 text-center">
+        {media ? (
+          <SyncedPlayer
+            media={media}
+            status={s.status}
+            positionMs={s.positionMs}
+            startAt={startAt}
+            offset={offset}
+            onUserPause={(ms) => void act("pause", Math.max(0, Math.round(ms)))}
+          />
+        ) : null}
+
+        <div className={cx("flex flex-col items-center gap-3 rounded-[22px] bg-[rgba(243,235,225,0.06)] px-4 text-center", media ? "py-4" : "py-8")}>
           {s.status === "waiting" ? (
             <>
               <span className="font-display text-2xl">{partnerHere ? `${pName} is here.` : `Waiting for ${pName}…`}</span>
-              <span className="text-sm text-[#C2B5AB]">{partnerHere ? "Open it in your apps, then start together." : "They’ve been invited. You can wait here."}</span>
+              <span className="text-sm text-[#C2B5AB]">{partnerHere ? (media ? "Start together and it plays here for both of you." : "Open it in your apps, then start together.") : "They’ve been invited. You can wait here."}</span>
             </>
           ) : countdown > 0 ? (
             <>
-              <span className="font-display text-[88px] leading-none" aria-live="assertive">
+              <span className={cx("font-display leading-none", media ? "text-[56px]" : "text-[88px]")} aria-live="assertive">
                 {countdown}
               </span>
-              <span className="text-sm text-[#C2B5AB]">Get ready to press play{s.positionMs ? ` at ${clock(s.positionMs)}` : ""}</span>
+              <span className="text-sm text-[#C2B5AB]">{media ? "Starting for both of you" : "Get ready to press play"}{s.positionMs ? ` at ${clock(s.positionMs)}` : ""}</span>
             </>
           ) : s.status === "playing" ? (
             <>
               <span className="font-stamp text-[11px] uppercase tracking-[0.1em] text-[#B9C6AC]">Playing for both</span>
-              <span className="font-display text-[56px] leading-none tabular-nums">{clock(pos)}</span>
-              <span className="text-xs text-[#C2B5AB]">If you drift, use −10s / +10s to line up together.</span>
+              <span className={cx("font-display leading-none tabular-nums", media ? "text-[36px]" : "text-[56px]")}>{clock(pos)}</span>
+              <span className="text-xs text-[#C2B5AB]">
+                {media ? "If either of you falls behind, it pulls you back in step." : "If you drift, use −10s / +10s to line up together."}
+              </span>
             </>
           ) : (
             <>
               <span className="font-stamp text-[11px] uppercase tracking-[0.1em] text-[#E6B79F]">Paused for both</span>
-              <span className="font-display text-[56px] leading-none tabular-nums">{clock(pos)}</span>
+              <span className={cx("font-display leading-none tabular-nums", media ? "text-[36px]" : "text-[56px]")}>{clock(pos)}</span>
             </>
           )}
         </div>
@@ -195,23 +212,23 @@ export default function TogetherRoom() {
 
         <div className="flex flex-col gap-2">
           {s.status === "waiting" ? (
-            <Button className="bg-[#F3EBE1] text-[#231C21] hover:bg-white" onClick={() => act("start")} loading={busy === "start"} disabled={!partnerHere}>
+            <Button className="bg-[#F3EBE1]! text-[#231C21]! hover:bg-white!" onClick={() => act("start")} loading={busy === "start"} disabled={!partnerHere}>
               {partnerHere ? "Start together" : `Start when ${pName} is here`}
             </Button>
           ) : s.status === "playing" ? (
             <div className="grid grid-cols-[1fr_2fr_1fr] gap-2">
-              <Button className="min-h-12 bg-[rgba(243,235,225,0.1)] text-[#F3EBE1] hover:bg-[rgba(243,235,225,0.16)]" onClick={() => act("seek", Math.max(0, pos - 10_000))} aria-label="Back 10 seconds for both">
+              <Button className="min-h-12 bg-[rgba(243,235,225,0.1)]! text-[#F3EBE1]! hover:bg-[rgba(243,235,225,0.16)]!" onClick={() => act("seek", Math.max(0, pos - 10_000))} aria-label="Back 10 seconds for both">
                 −10s
               </Button>
-              <Button className="min-h-12 bg-[#F3EBE1] text-[#231C21] hover:bg-white" onClick={() => act("pause")} loading={busy === "pause"}>
+              <Button className="min-h-12 bg-[#F3EBE1]! text-[#231C21]! hover:bg-white!" onClick={() => act("pause")} loading={busy === "pause"}>
                 Pause for both
               </Button>
-              <Button className="min-h-12 bg-[rgba(243,235,225,0.1)] text-[#F3EBE1] hover:bg-[rgba(243,235,225,0.16)]" onClick={() => act("seek", pos + 10_000)} aria-label="Forward 10 seconds for both">
+              <Button className="min-h-12 bg-[rgba(243,235,225,0.1)]! text-[#F3EBE1]! hover:bg-[rgba(243,235,225,0.16)]!" onClick={() => act("seek", pos + 10_000)} aria-label="Forward 10 seconds for both">
                 +10s
               </Button>
             </div>
           ) : (
-            <Button className="bg-[#F3EBE1] text-[#231C21] hover:bg-white" onClick={() => act("resume")} loading={busy === "resume"} disabled={!partnerHere}>
+            <Button className="bg-[#F3EBE1]! text-[#231C21]! hover:bg-white!" onClick={() => act("resume")} loading={busy === "resume"} disabled={!partnerHere}>
               {partnerHere ? "Resume together" : `Resume when ${pName} is back`}
             </Button>
           )}

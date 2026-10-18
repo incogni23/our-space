@@ -35,7 +35,7 @@ export default function NewNote() {
   return (
     <Screen className="gap-4">
       <TopBar back="/notes" />
-      <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">Write a note</h1>
+      <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">Write a note</h1>
       <NoteForm initial={initial} myTz={myTz} partner={partner} submitLabel="Seal it" busy={busy} error={error} onSubmit={save} />
     </Screen>
   );

@@ -109,7 +109,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 const createRelationship = `-- name: CreateRelationship :one
 INSERT INTO relationships (name, created_by)
 VALUES ($1, $2)
-RETURNING id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at
+RETURNING id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette
 `
 
 type CreateRelationshipParams struct {
@@ -131,6 +131,7 @@ func (q *Queries) CreateRelationship(ctx context.Context, arg CreateRelationship
 		&i.UnlinkedBy,
 		&i.ReadOnlyUntil,
 		&i.PurgedAt,
+		&i.Palette,
 	)
 	return i, err
 }
@@ -138,7 +139,7 @@ func (q *Queries) CreateRelationship(ctx context.Context, arg CreateRelationship
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (phone_e164, phone_verified_at, display_name)
 VALUES ($1, $2, $3)
-RETURNING id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone
+RETURNING id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink
 `
 
 type CreateUserParams struct {
@@ -161,6 +162,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TimeZone,
+		&i.Ink,
 	)
 	return i, err
 }
@@ -272,7 +274,7 @@ func (q *Queries) GetLatestInvitation(ctx context.Context, relationshipID uuid.U
 }
 
 const getRelationshipForUpdate = `-- name: GetRelationshipForUpdate :one
-SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at FROM relationships WHERE id = $1 FOR UPDATE
+SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette FROM relationships WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (Relationship, error) {
@@ -289,12 +291,13 @@ func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (R
 		&i.UnlinkedBy,
 		&i.ReadOnlyUntil,
 		&i.PurgedAt,
+		&i.Palette,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone FROM users WHERE id = $1
+SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -311,12 +314,13 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TimeZone,
+		&i.Ink,
 	)
 	return i, err
 }
 
 const getUserByPhone = `-- name: GetUserByPhone :one
-SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone FROM users WHERE phone_e164 = $1
+SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink FROM users WHERE phone_e164 = $1
 `
 
 func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 *string) (User, error) {
@@ -333,6 +337,7 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 *string) (User, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TimeZone,
+		&i.Ink,
 	)
 	return i, err
 }
@@ -389,7 +394,7 @@ func (q *Queries) LockUsers(ctx context.Context, ids []uuid.UUID) ([]LockUsersRo
 }
 
 const openMembers = `-- name: OpenMembers :many
-SELECT u.id, u.display_name, u.person_tint, u.time_zone, rm.joined_at
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, rm.joined_at
 FROM relationship_members rm
 JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 AND rm.left_at IS NULL
@@ -401,6 +406,7 @@ type OpenMembersRow struct {
 	DisplayName string
 	PersonTint  string
 	TimeZone    string
+	Ink         string
 	JoinedAt    time.Time
 }
 
@@ -418,6 +424,7 @@ func (q *Queries) OpenMembers(ctx context.Context, relationshipID uuid.UUID) ([]
 			&i.DisplayName,
 			&i.PersonTint,
 			&i.TimeZone,
+			&i.Ink,
 			&i.JoinedAt,
 		); err != nil {
 			return nil, err
@@ -431,7 +438,7 @@ func (q *Queries) OpenMembers(ctx context.Context, relationshipID uuid.UUID) ([]
 }
 
 const openMembership = `-- name: OpenMembership :one
-SELECT r.id, r.name, r.status, r.created_by, r.activated_at
+SELECT r.id, r.name, r.status, r.created_by, r.activated_at, r.palette
 FROM relationship_members rm
 JOIN relationships r ON r.id = rm.relationship_id
 WHERE rm.user_id = $1 AND rm.left_at IS NULL
@@ -443,6 +450,7 @@ type OpenMembershipRow struct {
 	Status      string
 	CreatedBy   uuid.UUID
 	ActivatedAt *time.Time
+	Palette     string
 }
 
 func (q *Queries) OpenMembership(ctx context.Context, userID uuid.UUID) (OpenMembershipRow, error) {
@@ -454,6 +462,7 @@ func (q *Queries) OpenMembership(ctx context.Context, userID uuid.UUID) (OpenMem
 		&i.Status,
 		&i.CreatedBy,
 		&i.ActivatedAt,
+		&i.Palette,
 	)
 	return i, err
 }
@@ -471,6 +480,20 @@ type RevokeOpenInvitationsParams struct {
 
 func (q *Queries) RevokeOpenInvitations(ctx context.Context, arg RevokeOpenInvitationsParams) error {
 	_, err := q.db.Exec(ctx, revokeOpenInvitations, arg.RelationshipID, arg.RespondedAt)
+	return err
+}
+
+const setInk = `-- name: SetInk :exec
+UPDATE users SET ink = $2, updated_at = now() WHERE id = $1
+`
+
+type SetInkParams struct {
+	ID  uuid.UUID
+	Ink string
+}
+
+func (q *Queries) SetInk(ctx context.Context, arg SetInkParams) error {
+	_, err := q.db.Exec(ctx, setInk, arg.ID, arg.Ink)
 	return err
 }
 
@@ -494,6 +517,20 @@ func (q *Queries) SetInvitationState(ctx context.Context, arg SetInvitationState
 		arg.RespondedAt,
 		arg.AcceptedBy,
 	)
+	return err
+}
+
+const setPalette = `-- name: SetPalette :exec
+UPDATE relationships SET palette = $2 WHERE id = $1 AND status = 'active'
+`
+
+type SetPaletteParams struct {
+	ID      uuid.UUID
+	Palette string
+}
+
+func (q *Queries) SetPalette(ctx context.Context, arg SetPaletteParams) error {
+	_, err := q.db.Exec(ctx, setPalette, arg.ID, arg.Palette)
 	return err
 }
 

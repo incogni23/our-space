@@ -78,6 +78,7 @@ type Member struct {
 	DisplayName string
 	PersonTint  string
 	TimeZone    string
+	Ink         string
 	JoinedAt    time.Time
 }
 
@@ -407,7 +408,7 @@ func (s *Service) CurrentSpace(ctx context.Context, userID uuid.UUID) (Space, er
 		return Space{}, err
 	}
 	sp := Space{Relationship: store.Relationship{
-		ID: m.ID, Name: m.Name, Status: m.Status, CreatedBy: m.CreatedBy, ActivatedAt: m.ActivatedAt,
+		ID: m.ID, Name: m.Name, Status: m.Status, CreatedBy: m.CreatedBy, ActivatedAt: m.ActivatedAt, Palette: m.Palette,
 	}}
 	members, err := q.OpenMembers(ctx, m.ID)
 	if err != nil {

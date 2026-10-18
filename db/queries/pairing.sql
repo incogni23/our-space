@@ -17,7 +17,7 @@ ORDER BY id
 FOR UPDATE;
 
 -- name: OpenMembership :one
-SELECT r.id, r.name, r.status, r.created_by, r.activated_at
+SELECT r.id, r.name, r.status, r.created_by, r.activated_at, r.palette
 FROM relationship_members rm
 JOIN relationships r ON r.id = rm.relationship_id
 WHERE rm.user_id = $1 AND rm.left_at IS NULL;
@@ -45,7 +45,7 @@ INSERT INTO relationship_members (relationship_id, user_id, joined_at)
 VALUES ($1, $2, $3);
 
 -- name: OpenMembers :many
-SELECT u.id, u.display_name, u.person_tint, u.time_zone, rm.joined_at
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, rm.joined_at
 FROM relationship_members rm
 JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 AND rm.left_at IS NULL
@@ -101,3 +101,9 @@ WHERE i.token_hash = $1;
 
 -- name: GetInvitationByToken :one
 SELECT * FROM relationship_invitations WHERE token_hash = $1;
+
+-- name: SetPalette :exec
+UPDATE relationships SET palette = $2 WHERE id = $1 AND status = 'active';
+
+-- name: SetInk :exec
+UPDATE users SET ink = $2, updated_at = now() WHERE id = $1;

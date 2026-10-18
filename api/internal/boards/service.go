@@ -40,6 +40,7 @@ type Space struct {
 	UserID        uuid.UUID
 	ReadOnly      bool
 	ReadOnlyUntil *time.Time
+	Palette       string
 }
 
 func (s *Service) Resolve(ctx context.Context, userID uuid.UUID) (Space, error) {
@@ -316,5 +317,5 @@ func (s *Service) ResolveRead(ctx context.Context, userID uuid.UUID) (Space, err
 	if err != nil {
 		return Space{}, err
 	}
-	return Space{ID: row.ID, Name: row.Name, UserID: userID, ReadOnly: row.Status != "active", ReadOnlyUntil: row.ReadOnlyUntil}, nil
+	return Space{ID: row.ID, Name: row.Name, UserID: userID, ReadOnly: row.Status != "active", ReadOnlyUntil: row.ReadOnlyUntil, Palette: row.Palette}, nil
 }

@@ -88,7 +88,7 @@ function NewCreation() {
           <div className="flex flex-col gap-3.5 rounded-t-[24px] bg-surface px-4 pb-8 pt-3 text-ink">
             <span className="h-1 w-10 self-center rounded-[2px] bg-line" aria-hidden="true" />
             <div className="flex flex-col gap-1.5">
-              <h1 className="m-0 font-display text-[28px] font-normal leading-[1.1]">Make something with this memory</h1>
+              <h1 className="m-0 font-display text-[28px] font-black italic leading-[0.95] tracking-[-0.02em]">Make something with this memory</h1>
               <p className="m-0 text-sm leading-[1.5] text-muted">Choose a format for your photos.</p>
             </div>
             {memories.length === 0 ? (

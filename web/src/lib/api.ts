@@ -1,3 +1,5 @@
+import type { Family, Ink } from "./theme";
+
 export type Tint = "terracotta" | "sage" | "mauve";
 
 export type User = {
@@ -5,10 +7,11 @@ export type User = {
   displayName: string;
   personTint: Tint;
   timeZone: string;
+  ink: Ink;
   phoneMasked?: string;
 };
 
-export type Member = { id: string; displayName: string; personTint: Tint; timeZone: string; joinedAt: string };
+export type Member = { id: string; displayName: string; personTint: Tint; timeZone: string; ink: Ink; joinedAt: string };
 
 export type PinKind = "link" | "place" | "song" | "idea";
 export type PinStatus = "saved" | "planned" | "done" | "remembered";
@@ -68,6 +71,7 @@ export type Space = {
   id: string;
   name: string;
   status: "pending" | "active";
+  palette: Family;
   activatedAt?: string;
   members: Member[];
   invite?: { state: "waiting" | "not_accepted"; inviteeName: string; expiresAt: string };
@@ -84,7 +88,8 @@ export type Notice =
   | { id: string; kind: "note_delivered"; createdAt: string; payload: { noteId: string; fromName: string } }
   | { id: string; kind: "plan_reminder"; createdAt: string; payload: { planId: string; title: string; at: string; kind: string } }
   | { id: string; kind: "plan_answer"; createdAt: string; payload: { planId: string; title: string; answer: "accepted" | "declined" | "suggested"; name: string; at: string } }
-  | { id: string; kind: "together_invite"; createdAt: string; payload: { sessionId: string; title: string; name: string } };
+  | { id: string; kind: "together_invite"; createdAt: string; payload: { sessionId: string; title: string; name: string } }
+  | { id: string; kind: "palette_changed"; createdAt: string; payload: { palette: Family; name: string } };
 
 export type TogetherSession = {
   id: string;
@@ -115,7 +120,7 @@ export type Note = {
   createdAt: string;
 };
 
-export type ReadOnlySpace = { id: string; name: string; until: string; members: Member[] };
+export type ReadOnlySpace = { id: string; name: string; palette: Family; until: string; members: Member[] };
 
 export type Me = {
   user: User;

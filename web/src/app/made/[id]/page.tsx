@@ -203,7 +203,7 @@ export default function CreationPage() {
 
           {step === "photos" ? (
             <div className="flex flex-1 flex-col gap-4 px-4 pb-32 pt-2">
-              <h1 className="m-0 font-display text-[30px] font-normal leading-[1.05]">{soft ? "Pick a photo" : "Pick photos"}</h1>
+              <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">{soft ? "Pick a photo" : "Pick photos"}</h1>
               <span className="text-[13px] text-muted">
                 From <strong className="font-semibold text-ink">{memory?.title ?? "…"}</strong>
               </span>
@@ -402,7 +402,7 @@ export default function CreationPage() {
           {c.renderMediaId ? <img src={photoUrl(c.renderMediaId)} alt="What was made" className="block w-full" /> : <span className="block aspect-[4/5] bg-sunken" />}
         </div>
         <div className="flex flex-col gap-2">
-          <h1 className="m-0 font-display text-[26px] font-normal leading-[1.1]">{headline}</h1>
+          <h1 className="m-0 font-display text-[26px] font-black italic leading-[0.95] tracking-[-0.02em]">{headline}</h1>
           <span>
             <StatusChip status={c.status} partnerName={pName} mine={mine} />
           </span>

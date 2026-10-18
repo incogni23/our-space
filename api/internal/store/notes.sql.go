@@ -201,7 +201,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id uuid.UUID) (Plan, error) {
 }
 
 const getRelationship = `-- name: GetRelationship :one
-SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at FROM relationships WHERE id = $1
+SELECT id, name, status, created_by, created_at, activated_at, unlinked_at, unlinked_by, read_only_until, purged_at, palette FROM relationships WHERE id = $1
 `
 
 func (q *Queries) GetRelationship(ctx context.Context, id uuid.UUID) (Relationship, error) {
@@ -218,6 +218,7 @@ func (q *Queries) GetRelationship(ctx context.Context, id uuid.UUID) (Relationsh
 		&i.UnlinkedBy,
 		&i.ReadOnlyUntil,
 		&i.PurgedAt,
+		&i.Palette,
 	)
 	return i, err
 }

@@ -36,7 +36,7 @@ export default function Made() {
         Our Story
       </Link>
       <div className="flex items-center justify-between">
-        <h1 className="m-0 font-display text-[34px] font-normal leading-[1.05]">Made by Us</h1>
+        <h1 className="m-0 font-display text-[44px] font-black italic leading-[0.95] tracking-[-0.02em]">Made by Us</h1>
         {readOnly ? null : (
           <ButtonLink href="/made/new" className="min-h-11 w-auto px-3.5 text-sm">
             Make something

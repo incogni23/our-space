@@ -149,7 +149,7 @@ function PlanDetail() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">{plan.title}</h1>
+        <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">{plan.title}</h1>
         {open ? (
           <span
             className={cx(

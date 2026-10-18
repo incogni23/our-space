@@ -85,7 +85,7 @@ WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
 -- name: ReadableSpaceFor :one
 -- The space a user may read: their active space, or a closed one still inside its
 -- read-only window (both former members can read and download until then).
-SELECT r.id, r.name, r.status, r.read_only_until FROM relationship_members rm
+SELECT r.id, r.name, r.status, r.read_only_until, r.palette FROM relationship_members rm
 JOIN relationships r ON r.id = rm.relationship_id
 WHERE rm.user_id = $1
   AND ((rm.left_at IS NULL AND r.status = 'active')
@@ -95,7 +95,7 @@ LIMIT 1;
 
 -- name: MembersOf :many
 -- Everyone who was ever in the space (for read-only views after it closed).
-SELECT u.id, u.display_name, u.person_tint, u.time_zone
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink
 FROM relationship_members rm JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 ORDER BY rm.joined_at;
 

@@ -76,7 +76,7 @@ export default function MemoryDetail() {
           {kindLabel[memory.kind]} · {when}
           {memory.place ? ` · ${memory.place}` : ""}
         </span>
-        <h1 className="m-0 font-display text-[30px] font-normal leading-[1.1]">{memory.title}</h1>
+        <h1 className="m-0 font-display text-[30px] font-black italic leading-[0.95] tracking-[-0.02em]">{memory.title}</h1>
         {memory.caption ? <p className="m-0 font-display text-[19px] italic leading-[1.4] text-muted">{memory.caption}</p> : null}
         {by ? (
           <span className="flex items-center gap-1.5 text-[13px] text-muted">

@@ -139,6 +139,7 @@ func (s *Server) Routes() http.Handler {
 			r.Post("/space/invitations", s.handleCreateInvitation)
 			r.Post("/space/leave/start", s.handleLeaveStart)
 			r.Post("/space/leave", s.handleLeave)
+			r.Post("/space/palette", s.handleSetPalette)
 			r.Post("/invitations/{token}/accept", s.handleAccept)
 			r.Post("/invitations/{token}/decline", s.handleDecline)
 
@@ -173,6 +174,7 @@ func (s *Server) Routes() http.Handler {
 			r.Patch("/notes/{id}", s.handleUpdateNote)
 			r.Delete("/notes/{id}", s.handleDeleteNote)
 			r.Post("/notes/{id}/keep", s.handleKeepNote)
+			r.Post("/notes/{id}/open", s.handleOpenNote)
 			r.Get("/creations", s.handleListCreations)
 			r.Post("/creations", s.handleCreateCreation)
 			r.Get("/creations/{id}", s.handleGetCreation)
