@@ -8,10 +8,13 @@ export type User = {
   personTint: Tint;
   timeZone: string;
   ink: Ink;
+  /** Usually awake, hours in their own zone; to < from wraps past midnight. */
+  awakeFrom: number;
+  awakeTo: number;
   phoneMasked?: string;
 };
 
-export type Member = { id: string; displayName: string; personTint: Tint; timeZone: string; ink: Ink; joinedAt: string };
+export type Member = { id: string; displayName: string; personTint: Tint; timeZone: string; ink: Ink; awakeFrom: number; awakeTo: number; joinedAt: string };
 
 export type PinKind = "link" | "place" | "song" | "idea" | "photo";
 export type PinStatus = "saved" | "planned" | "done" | "remembered";

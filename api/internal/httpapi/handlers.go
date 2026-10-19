@@ -20,11 +20,13 @@ type userJSON struct {
 	PersonTint  string `json:"personTint"`
 	TimeZone    string `json:"timeZone"`
 	Ink         string `json:"ink"`
+	AwakeFrom   int16  `json:"awakeFrom"`
+	AwakeTo     int16  `json:"awakeTo"`
 	PhoneMasked string `json:"phoneMasked,omitempty"`
 }
 
 func toUser(u store.User) userJSON {
-	out := userJSON{ID: u.ID.String(), DisplayName: u.DisplayName, PersonTint: u.PersonTint, TimeZone: u.TimeZone, Ink: u.Ink}
+	out := userJSON{ID: u.ID.String(), DisplayName: u.DisplayName, PersonTint: u.PersonTint, TimeZone: u.TimeZone, Ink: u.Ink, AwakeFrom: u.AwakeFrom, AwakeTo: u.AwakeTo}
 	if u.PhoneE164 != nil {
 		out.PhoneMasked = maskPhone(*u.PhoneE164)
 	}
@@ -49,6 +51,8 @@ type memberJSON struct {
 	PersonTint  string    `json:"personTint"`
 	TimeZone    string    `json:"timeZone"`
 	Ink         string    `json:"ink"`
+	AwakeFrom   int16     `json:"awakeFrom"`
+	AwakeTo     int16     `json:"awakeTo"`
 	JoinedAt    time.Time `json:"joinedAt,omitzero"`
 }
 
@@ -74,7 +78,7 @@ func toSpace(sp pairing.Space) spaceJSON {
 		ActivatedAt: sp.Relationship.ActivatedAt, Members: []memberJSON{},
 	}
 	for _, m := range sp.Members {
-		out.Members = append(out.Members, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, Ink: m.Ink, JoinedAt: m.JoinedAt})
+		out.Members = append(out.Members, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, Ink: m.Ink, AwakeFrom: m.AwakeFrom, AwakeTo: m.AwakeTo, JoinedAt: m.JoinedAt})
 	}
 	if sp.Invite != nil {
 		out.Invite = &inviteStateJSON{State: sp.Invite.State, InviteeName: sp.Invite.InviteeName, ExpiresAt: sp.Invite.ExpiresAt}
@@ -200,7 +204,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 			members, _ := store.New(s.pool).MembersOf(r.Context(), ro.ID)
 			ms := make([]memberJSON, 0, len(members))
 			for _, m := range members {
-				ms = append(ms, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, Ink: m.Ink})
+				ms = append(ms, memberJSON{ID: m.ID.String(), DisplayName: m.DisplayName, PersonTint: m.PersonTint, TimeZone: m.TimeZone, Ink: m.Ink, AwakeFrom: m.AwakeFrom, AwakeTo: m.AwakeTo})
 			}
 			out["readOnlySpace"] = map[string]any{"id": ro.ID.String(), "name": ro.Name, "palette": ro.Palette, "until": ro.ReadOnlyUntil, "members": ms}
 		}
@@ -225,11 +229,23 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		PersonTint  string `json:"personTint"`
 		TimeZone    string `json:"timeZone"`
 		Ink         string `json:"ink"`
+		AwakeFrom   *int16 `json:"awakeFrom"`
+		AwakeTo     *int16 `json:"awakeTo"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
 	uid := session(r).UserID
+	if in.AwakeFrom != nil || in.AwakeTo != nil {
+		if in.AwakeFrom == nil || in.AwakeTo == nil || *in.AwakeFrom < 0 || *in.AwakeFrom > 23 || *in.AwakeTo < 1 || *in.AwakeTo > 24 || *in.AwakeFrom == *in.AwakeTo {
+			writeError(w, http.StatusBadRequest, "invalid_input", "Pick when you usually wake up and go to sleep.")
+			return
+		}
+		if err := store.New(s.pool).SetAwakeHours(r.Context(), store.SetAwakeHoursParams{ID: uid, AwakeFrom: *in.AwakeFrom, AwakeTo: *in.AwakeTo}); err != nil {
+			s.serverError(w, r, err)
+			return
+		}
+	}
 	if in.Ink != "" {
 		if !inks[in.Ink] {
 			writeError(w, http.StatusBadRequest, "invalid_input", "That ink isn’t one of the four.")

@@ -95,7 +95,7 @@ LIMIT 1;
 
 -- name: MembersOf :many
 -- Everyone who was ever in the space (for read-only views after it closed).
-SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, u.awake_from, u.awake_to
 FROM relationship_members rm JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 ORDER BY rm.joined_at;
 

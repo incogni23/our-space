@@ -79,6 +79,8 @@ type Member struct {
 	PersonTint  string
 	TimeZone    string
 	Ink         string
+	AwakeFrom   int16
+	AwakeTo     int16
 	JoinedAt    time.Time
 }
 

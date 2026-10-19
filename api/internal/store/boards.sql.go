@@ -428,7 +428,7 @@ func (q *Queries) ListPins(ctx context.Context, arg ListPinsParams) ([]Pin, erro
 }
 
 const membersOf = `-- name: MembersOf :many
-SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, u.awake_from, u.awake_to
 FROM relationship_members rm JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 ORDER BY rm.joined_at
 `
@@ -439,6 +439,8 @@ type MembersOfRow struct {
 	PersonTint  string
 	TimeZone    string
 	Ink         string
+	AwakeFrom   int16
+	AwakeTo     int16
 }
 
 // Everyone who was ever in the space (for read-only views after it closed).
@@ -457,6 +459,8 @@ func (q *Queries) MembersOf(ctx context.Context, relationshipID uuid.UUID) ([]Me
 			&i.PersonTint,
 			&i.TimeZone,
 			&i.Ink,
+			&i.AwakeFrom,
+			&i.AwakeTo,
 		); err != nil {
 			return nil, err
 		}

@@ -111,7 +111,7 @@ Onboarding UI (A1–A8)
 - [x] Time zone per person (detected on A4/A8)
 - [x] Boards & pins (C1–C3): save link/place/song/idea, first board auto-created, new board inline, visual/list views, filters, pin detail, status Saved/Planned/Done/Remembered, notes between you, remove + undo
 - [x] Link previews: server-side Open Graph fetch with SSRF guard (public IPs on 80/443 only, checked at connect time, redirects re-checked, size/time limits); preview image re-encoded and stored like a photo so viewers never load third-party URLs
-- [ ] Awake hours (A8) + "both usually awake" overlap on B1
+- [x] Awake hours (A8, also in Settings) + "both usually up from …" overlap on B1, half-hour aware; never shown as online
 - [x] Plans (D1–D3): plan from a pin (pin → planned), meet-up or call, both clocks with day labels, weekly repeat on the anchor zone's wall clock, DST notes, invite to confirm → accept / suggest another time / decline, edit, cancel, .ics export, month view, "Next together" on B1
 - [ ] Trips (partner's travel dates → "you're both in Bengaluru that day", countdown on B1)
 - [x] Plan reminders (Phase 3)
@@ -159,6 +159,7 @@ Kept in sync with the canvas (5.2 States, 5.4 Product calls, 4.3 Content, protot
 - 2026-10-18 · Plan history: plans are never deleted; History tab shows past, declined and cancelled plans; each plan keeps a "What happened" timeline. Canvas updated (5.4 #07, sticky on prototype row B–D).
 - 2026-10-18 · Read receipt moment (v2 letter): "Read" is recorded when the recipient taps the heart seal (`POST /notes/{id}/open`), not when the page loads. Canvas v2 Letter copy updated.
 - 2026-10-18 · Together plays in step: YouTube links and Spotify tracks/episodes (and audio/video files) play inside the room for both, on the session's shared clock (3-2-1 start, pause, ±10s, drift correction; pausing in the player pauses both). One tap per device first (browser sound rules; Spotify needs the tap on its own ▶). Netflix and other apps keep the shared 3-2-1. Spotify logged out = 30s previews. Canvas sticky on the v2 page.
+- 2026-10-19 · v2 replaces the per-person tint with the handwriting ink: Make it yours (A8) now asks for your ink and your usual awake hours (default 7 am – midnight).
 - 2026-10-18 · Phone and laptop layouts: under 1024px the floating pill bar; from 1024px the v2 desktop sidebar (name, the two of you, every section, Save something, Our colours) and wide magazine layouts for Our Space, a board and Our Story.
 
 ## v2 · Love, in print (restyle)  ← in progress (branch v2-restyle)

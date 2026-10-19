@@ -256,7 +256,7 @@ func (q *Queries) GetSessionByTokenForUpdate(ctx context.Context, tokenHash []by
 }
 
 const getUserByPhoneForUpdate = `-- name: GetUserByPhoneForUpdate :one
-SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink FROM users WHERE phone_e164 = $1 FOR UPDATE
+SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink, awake_from, awake_to FROM users WHERE phone_e164 = $1 FOR UPDATE
 `
 
 func (q *Queries) GetUserByPhoneForUpdate(ctx context.Context, phoneE164 *string) (User, error) {
@@ -274,12 +274,14 @@ func (q *Queries) GetUserByPhoneForUpdate(ctx context.Context, phoneE164 *string
 		&i.UpdatedAt,
 		&i.TimeZone,
 		&i.Ink,
+		&i.AwakeFrom,
+		&i.AwakeTo,
 	)
 	return i, err
 }
 
 const getUserForUpdate = `-- name: GetUserForUpdate :one
-SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink FROM users WHERE id = $1 FOR UPDATE
+SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink, awake_from, awake_to FROM users WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetUserForUpdate(ctx context.Context, id uuid.UUID) (User, error) {
@@ -297,6 +299,8 @@ func (q *Queries) GetUserForUpdate(ctx context.Context, id uuid.UUID) (User, err
 		&i.UpdatedAt,
 		&i.TimeZone,
 		&i.Ink,
+		&i.AwakeFrom,
+		&i.AwakeTo,
 	)
 	return i, err
 }
@@ -421,7 +425,7 @@ func (q *Queries) TouchSession(ctx context.Context, arg TouchSessionParams) erro
 
 const updateProfile = `-- name: UpdateProfile :one
 UPDATE users SET display_name = $2, person_tint = $3, updated_at = $4 WHERE id = $1
-RETURNING id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink
+RETURNING id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink, awake_from, awake_to
 `
 
 type UpdateProfileParams struct {
@@ -451,6 +455,8 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (U
 		&i.UpdatedAt,
 		&i.TimeZone,
 		&i.Ink,
+		&i.AwakeFrom,
+		&i.AwakeTo,
 	)
 	return i, err
 }

@@ -8,6 +8,7 @@ import { forgetThisDevice, pushState, turnOffPush, turnOnPush, type PushState } 
 import { Button, Card, ErrorText, Heart, Loading, Screen, Stamp } from "@/components/ui";
 import { EXPORT_URL, api, errorMessage, homeFor, partnerOf } from "@/lib/api";
 import { useMe } from "@/lib/use-me";
+import { hourLabel } from "@/lib/awake";
 import { familyName, resetTheme } from "@/lib/theme";
 
 const chevron = (
@@ -102,6 +103,15 @@ export default function Settings() {
             <span className="flex flex-1 flex-col gap-0.5">
               <span className="text-[15px] font-medium">Colours and your ink</span>
               <span className="text-[13px] text-muted">{familyName(space.palette)} · either of you can change it</span>
+            </span>
+            {chevron}
+          </Link>
+          <Link href="/yours" className="flex min-h-[60px] items-center gap-3 rounded-(--radius-card) border border-line bg-surface px-3.5 py-2.5 text-ink no-underline">
+            <span className="flex flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-medium">Usually awake</span>
+              <span className="text-[13px] text-muted">
+                {hourLabel(me.user.awakeFrom)} – {hourLabel(me.user.awakeTo)} · only for suggesting good times
+              </span>
             </span>
             {chevron}
           </Link>

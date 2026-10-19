@@ -139,7 +139,7 @@ func (q *Queries) CreateRelationship(ctx context.Context, arg CreateRelationship
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (phone_e164, phone_verified_at, display_name)
 VALUES ($1, $2, $3)
-RETURNING id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink
+RETURNING id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink, awake_from, awake_to
 `
 
 type CreateUserParams struct {
@@ -163,6 +163,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.TimeZone,
 		&i.Ink,
+		&i.AwakeFrom,
+		&i.AwakeTo,
 	)
 	return i, err
 }
@@ -297,7 +299,7 @@ func (q *Queries) GetRelationshipForUpdate(ctx context.Context, id uuid.UUID) (R
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink FROM users WHERE id = $1
+SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink, awake_from, awake_to FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -315,12 +317,14 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 		&i.TimeZone,
 		&i.Ink,
+		&i.AwakeFrom,
+		&i.AwakeTo,
 	)
 	return i, err
 }
 
 const getUserByPhone = `-- name: GetUserByPhone :one
-SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink FROM users WHERE phone_e164 = $1
+SELECT id, phone_e164, phone_verified_at, display_name, person_tint, backup_email, backup_email_verified_at, created_at, updated_at, time_zone, ink, awake_from, awake_to FROM users WHERE phone_e164 = $1
 `
 
 func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 *string) (User, error) {
@@ -338,6 +342,8 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phoneE164 *string) (User, 
 		&i.UpdatedAt,
 		&i.TimeZone,
 		&i.Ink,
+		&i.AwakeFrom,
+		&i.AwakeTo,
 	)
 	return i, err
 }
@@ -394,7 +400,7 @@ func (q *Queries) LockUsers(ctx context.Context, ids []uuid.UUID) ([]LockUsersRo
 }
 
 const openMembers = `-- name: OpenMembers :many
-SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, rm.joined_at
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, u.awake_from, u.awake_to, rm.joined_at
 FROM relationship_members rm
 JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 AND rm.left_at IS NULL
@@ -407,6 +413,8 @@ type OpenMembersRow struct {
 	PersonTint  string
 	TimeZone    string
 	Ink         string
+	AwakeFrom   int16
+	AwakeTo     int16
 	JoinedAt    time.Time
 }
 
@@ -425,6 +433,8 @@ func (q *Queries) OpenMembers(ctx context.Context, relationshipID uuid.UUID) ([]
 			&i.PersonTint,
 			&i.TimeZone,
 			&i.Ink,
+			&i.AwakeFrom,
+			&i.AwakeTo,
 			&i.JoinedAt,
 		); err != nil {
 			return nil, err
@@ -480,6 +490,21 @@ type RevokeOpenInvitationsParams struct {
 
 func (q *Queries) RevokeOpenInvitations(ctx context.Context, arg RevokeOpenInvitationsParams) error {
 	_, err := q.db.Exec(ctx, revokeOpenInvitations, arg.RelationshipID, arg.RespondedAt)
+	return err
+}
+
+const setAwakeHours = `-- name: SetAwakeHours :exec
+UPDATE users SET awake_from = $2, awake_to = $3, updated_at = now() WHERE id = $1
+`
+
+type SetAwakeHoursParams struct {
+	ID        uuid.UUID
+	AwakeFrom int16
+	AwakeTo   int16
+}
+
+func (q *Queries) SetAwakeHours(ctx context.Context, arg SetAwakeHoursParams) error {
+	_, err := q.db.Exec(ctx, setAwakeHours, arg.ID, arg.AwakeFrom, arg.AwakeTo)
 	return err
 }
 

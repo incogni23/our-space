@@ -11,6 +11,7 @@ import { Film, Polaroid, SpinStamp } from "@/components/print";
 import { ReadOnlyBanner } from "@/components/read-only-banner";
 import { ButtonLink, Heart, Loading, PrintTitle, Rule, Screen, Tape, cx } from "@/components/ui";
 import { api, cityOf, homeFor, partnerOf, photoUrl, type Member, type Memory, type Note, type Pin, type Plan, type TogetherSession, type User } from "@/lib/api";
+import { bothAwakeLine } from "@/lib/awake";
 import { issueOf, roman, sinceOf } from "@/lib/issue";
 import { useLiveTick } from "@/lib/live";
 import { inkColor } from "@/lib/theme";
@@ -31,18 +32,6 @@ function greeting(tz: string): string {
   if (h < 12) return "good morning";
   if (h < 17) return "good afternoon";
   return "good evening";
-}
-
-/** The next hour you're both plausibly awake (8 am – 11 pm each side). */
-function bothAwake(myTz: string, theirTz: string, now: Date): string | null {
-  const awake = (h: number) => h >= 8 && h < 23;
-  if (awake(hourIn(myTz, now)) && awake(hourIn(theirTz, now))) return "you’re both awake right now";
-  for (let i = 1; i <= 24; i++) {
-    const t = new Date(now.getTime() + i * 3_600_000);
-    t.setMinutes(0, 0, 0);
-    if (awake(hourIn(myTz, t)) && awake(hourIn(theirTz, t))) return `you’re both awake from ${timeOnly(t.toISOString(), myTz)}, your time`;
-  }
-  return null;
 }
 
 /** 1:16 pm → ["1:16", "pm"] for the big clock. */
@@ -169,7 +158,7 @@ export default function OurSpace() {
   const sleeps = nextPlan ? daysUntil(nextPlan.at, myTz) : 0;
   const [myT, myAp] = clockParts(myTz, now);
   const [thT, thAp] = partner ? clockParts(partner.timeZone, now) : ["", ""];
-  const overlap = partner && partner.timeZone !== myTz ? bothAwake(myTz, partner.timeZone, now) : partner ? "same clock today" : null;
+  const overlap = partner ? bothAwakeLine(me.user, partner, now) : null;
   const scatter = [
     { pos: "left-0 top-[18px] w-[170px]", rot: -5, h: "h-[150px]", z: "" },
     { pos: "left-[120px] top-[70px] w-[150px]", rot: 4, h: "h-[140px]", z: "z-[2]" },

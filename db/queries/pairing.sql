@@ -45,7 +45,7 @@ INSERT INTO relationship_members (relationship_id, user_id, joined_at)
 VALUES ($1, $2, $3);
 
 -- name: OpenMembers :many
-SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, rm.joined_at
+SELECT u.id, u.display_name, u.person_tint, u.time_zone, u.ink, u.awake_from, u.awake_to, rm.joined_at
 FROM relationship_members rm
 JOIN users u ON u.id = rm.user_id
 WHERE rm.relationship_id = $1 AND rm.left_at IS NULL
@@ -107,3 +107,6 @@ UPDATE relationships SET palette = $2 WHERE id = $1 AND status = 'active';
 
 -- name: SetInk :exec
 UPDATE users SET ink = $2, updated_at = now() WHERE id = $1;
+
+-- name: SetAwakeHours :exec
+UPDATE users SET awake_from = $2, awake_to = $3, updated_at = now() WHERE id = $1;

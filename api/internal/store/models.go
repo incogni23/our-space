@@ -301,6 +301,8 @@ type User struct {
 	UpdatedAt             time.Time
 	TimeZone              string
 	Ink                   string
+	AwakeFrom             int16
+	AwakeTo               int16
 }
 
 type UserNotice struct {

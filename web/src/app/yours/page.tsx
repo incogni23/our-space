@@ -2,22 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, ErrorText, Field, Frames, Loading, Screen, cx } from "@/components/ui";
-import { api, errorMessage, homeFor, partnerOf, type Tint } from "@/lib/api";
+import { Button, ErrorText, Field, Heart, Loading, Screen } from "@/components/ui";
+import { api, errorMessage, homeFor, partnerOf } from "@/lib/api";
+import { hourLabel } from "@/lib/awake";
+import { INKS, applyInk, inkColor, type Ink } from "@/lib/theme";
 import { useMe } from "@/lib/use-me";
-
-const TINTS: Array<{ id: Tint; label: string; cls: string }> = [
-  { id: "terracotta", label: "Terracotta", cls: "bg-terracotta-wash text-terracotta-ink" },
-  { id: "sage", label: "Sage", cls: "bg-sage-wash text-sage-ink" },
-  { id: "mauve", label: "Mauve", cls: "bg-mauve-wash text-mauve-ink" },
-];
 
 // A8 · Make it yours. Next: H1 choose a plan (Phase 1b); until billing lands, the space.
 export default function MakeItYours() {
   const router = useRouter();
   const { me, loading } = useMe();
   const [name, setName] = useState("");
-  const [tint, setTint] = useState<Tint>("terracotta");
+  const [ink, setInk] = useState<Ink>("accent");
+  const [awakeFrom, setAwakeFrom] = useState(7);
+  const [awakeTo, setAwakeTo] = useState(24);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +26,9 @@ export default function MakeItYours() {
       return;
     }
     setName((n) => n || me.user.displayName);
-    setTint(me.user.personTint);
+    setInk(me.user.ink);
+    setAwakeFrom(me.user.awakeFrom);
+    setAwakeTo(me.user.awakeTo);
   }, [me, router]);
 
   if (loading || !me?.space) return <Loading />;
@@ -40,7 +40,7 @@ export default function MakeItYours() {
     setError(null);
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      await api("/me", { method: "PATCH", body: { displayName: name.trim(), personTint: tint, timeZone } });
+      await api("/me", { method: "PATCH", body: { displayName: name.trim(), personTint: me!.user.personTint, timeZone, ink, awakeFrom, awakeTo } });
       router.replace("/space");
     } catch (err) {
       setError(errorMessage(err));
@@ -50,8 +50,8 @@ export default function MakeItYours() {
 
   return (
     <Screen className="gap-5">
-      <div className="flex items-center gap-3 rounded-(--radius-card) bg-shared-wash px-3.5 py-3">
-        <Frames size={28} />
+      <div className="flex items-center gap-3 rounded-(--radius-card) bg-petal px-3.5 py-3">
+        <Heart size={24} color="var(--accent-ink)" />
         <span className="text-sm leading-[1.45]">
           <strong className="font-semibold text-shared-ink">
             {joinedByMe ? `You joined ${me.space.name}.` : `${partner?.displayName || "Your person"} joined ${me.space.name}.`}
@@ -61,8 +61,8 @@ export default function MakeItYours() {
       </div>
 
       <div className="flex items-baseline justify-between">
-        <h1 className="m-0 font-display text-[32px] font-black italic leading-[0.95] tracking-[-0.02em]">Make it yours.</h1>
-        {!joinedByMe ? <span className="font-stamp text-[11px] tracking-[0.1em] text-muted">STEP 4 OF 4</span> : null}
+        <h1 className="m-0 font-display text-[40px] font-black italic leading-[0.95] tracking-[-0.02em]">Make it yours.</h1>
+        {!joinedByMe ? <span className="whitespace-nowrap font-type text-[11px] tracking-[0.16em] text-muted">STEP 4 OF 4</span> : null}
       </div>
 
       {!me.user.displayName ? (
@@ -71,33 +71,58 @@ export default function MakeItYours() {
 
       <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
         <legend className="mb-2.5 p-0 text-[13px] font-medium">
-          Your colour <span className="font-normal text-muted">· marks what you save and write</span>
+          Your handwriting ink <span className="font-normal text-muted">· the words you write show in it</span>
         </legend>
-        <div className="grid grid-cols-3 gap-2.5">
-          {TINTS.map((t) => (
+        <div role="radiogroup" aria-label="Your ink" className="flex items-center gap-2.5">
+          {INKS.map((i) => (
             <button
-              key={t.id}
+              key={i.id}
               type="button"
-              aria-pressed={tint === t.id}
-              onClick={() => setTint(t.id)}
-              className={cx(
-                "flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-(--radius-card) bg-surface text-[13px] font-medium text-ink",
-                tint === t.id ? "border-2 border-ink" : "border border-line",
-              )}
-            >
-              <span className={cx("flex size-8 items-center justify-center rounded-full text-sm font-semibold", t.cls)}>
-                {(name || "?").slice(0, 1).toUpperCase()}
-              </span>
-              {t.label}
-            </button>
+              role="radio"
+              aria-checked={ink === i.id}
+              aria-label={i.label}
+              onClick={() => {
+                setInk(i.id);
+                applyInk(i.id);
+              }}
+              className="size-12 cursor-pointer rounded-full shadow-[inset_0_0_0_3px_var(--ground)]"
+              style={{ background: inkColor(i.id), border: ink === i.id ? "2.5px solid var(--text)" : "2px solid transparent" }}
+            />
           ))}
-        </div>
-        {partner ? (
-          <span className="text-xs text-muted">
-            {partner.displayName || "Your person"} picked {partner.personTint}. You can both pick the same one; initials
-            still tell you apart.
+          <span className="font-hand text-2xl" style={{ color: inkColor(ink) }}>
+            love, {name.trim() || "me"}
           </span>
-        ) : null}
+        </div>
+        {partner ? <span className="text-xs text-muted">{partner.displayName || "Your person"} picks their own. You can both use the same one.</span> : null}
+      </fieldset>
+
+      <fieldset className="m-0 flex flex-col gap-2 rounded-2xl bg-paper px-4 py-3.5 shadow-(--shadow-paper)">
+        <legend className="sr-only">Usually awake</legend>
+        <span className="text-[13px] text-muted">Usually awake</span>
+        <div className="flex items-center gap-2">
+          <label className="sr-only" htmlFor="from">
+            From
+          </label>
+          <select id="from" value={awakeFrom} onChange={(e) => setAwakeFrom(Number(e.target.value))} className="h-11 flex-1 rounded-(--radius-control) border border-line-control bg-surface px-2 text-[15px] font-semibold text-ink">
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>
+                {hourLabel(h)}
+              </option>
+            ))}
+          </select>
+          <span className="text-muted">–</span>
+          <label className="sr-only" htmlFor="to">
+            Until
+          </label>
+          <select id="to" value={awakeTo} onChange={(e) => setAwakeTo(Number(e.target.value))} className="h-11 flex-1 rounded-(--radius-control) border border-line-control bg-surface px-2 text-[15px] font-semibold text-ink">
+            {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
+              <option key={h} value={h} disabled={h === awakeFrom}>
+                {hourLabel(h)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <span className="text-xs text-muted">Only used to suggest good times. Never shown as “online”.</span>
       </fieldset>
 
       <ErrorText>{error}</ErrorText>
