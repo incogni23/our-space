@@ -13,7 +13,7 @@ export type User = {
 
 export type Member = { id: string; displayName: string; personTint: Tint; timeZone: string; ink: Ink; joinedAt: string };
 
-export type PinKind = "link" | "place" | "song" | "idea";
+export type PinKind = "link" | "place" | "song" | "idea" | "photo";
 export type PinStatus = "saved" | "planned" | "done" | "remembered";
 
 export type Board = {

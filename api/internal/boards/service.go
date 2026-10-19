@@ -105,6 +105,7 @@ type NewPin struct {
 	Note         string // "why are you saving it?"
 	BoardID      *uuid.UUID
 	NewBoardName string
+	PhotoID      *uuid.UUID // a photo pin: an uploaded photo (POST /media) saved to a board
 }
 
 // classify turns what was typed into a kind, a canonical URL and a default title.
@@ -136,18 +137,26 @@ func classify(text string) (kind string, link *string, title string) {
 	return kind, &canon, host
 }
 
-var defaultBoard = map[string]string{"place": "Places", "song": "Songs", "link": "Ideas", "idea": "Ideas"}
+var defaultBoard = map[string]string{"place": "Places", "song": "Songs", "link": "Ideas", "idea": "Ideas", "photo": "Photos"}
 
 // CreatePin saves something for both of you. The first save creates the first board.
 func (s *Service) CreatePin(ctx context.Context, sp Space, in NewPin) (store.Pin, error) {
-	if _, err := clean(in.Text, 1, 2000); err != nil {
-		return store.Pin{}, err
+	if in.PhotoID == nil {
+		if _, err := clean(in.Text, 1, 2000); err != nil {
+			return store.Pin{}, err
+		}
 	}
 	note, err := clean(in.Note, 0, 1000)
 	if err != nil {
 		return store.Pin{}, err
 	}
 	kind, link, title := classify(in.Text)
+	if in.PhotoID != nil {
+		kind, link, title = "photo", nil, "A photo"
+		if t := strings.TrimSpace(in.Text); t != "" {
+			title = t
+		}
+	}
 	if t := strings.TrimSpace(in.Title); t != "" {
 		title = t
 	}
@@ -188,6 +197,15 @@ func (s *Service) CreatePin(ctx context.Context, sp Space, in NewPin) (store.Pin
 				return err
 			}
 			boardID = b.ID
+		}
+		if in.PhotoID != nil {
+			if _, err := q.GetMedia(ctx, store.GetMediaParams{ID: *in.PhotoID, RelationshipID: sp.ID}); err != nil {
+				return notFound(err) // only photos uploaded into this space
+			}
+			pin, err = q.CreatePhotoPin(ctx, store.CreatePhotoPinParams{
+				RelationshipID: sp.ID, BoardID: boardID, CreatedBy: sp.UserID, Title: title, Note: note, MediaID: in.PhotoID,
+			})
+			return err
 		}
 		pin, err = q.CreatePin(ctx, store.CreatePinParams{
 			RelationshipID: sp.ID, BoardID: boardID, CreatedBy: sp.UserID,

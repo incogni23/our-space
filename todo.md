@@ -53,7 +53,7 @@ todo.md
 - [x] Repo skeleton, README, `.gitignore`, `git init`
 - [x] `design/` tokens checked in
 - [x] Local Postgres for dev/tests (script that runs a throwaway cluster)
-- [ ] Go module, Chi router, config from env, health check, structured logging
+- [x] Go module, Chi router, config from env, health check, structured logging
 - [x] goose migrations + sqlc config wired to `db/`
 - [x] Next.js app with Tailwind theme generated from `tokens.css` (light + evening)
 - [x] Fonts: Newsreader, DM Sans, DM Mono
@@ -95,7 +95,7 @@ Leaving (G1–G3)
 - [x] Unilateral leave: confirm with OTP, close membership(s), relationship → unlinked, read_only_until = +30 days
 - [x] Partner "space has closed" notice + neutral closed screen
 - [ ] DECIDE: "tell them tomorrow" (G2) — partner's app changes immediately, so a delay hides nothing today. Option hidden in UI until decided
-- [ ] Revoke all share links on leave
+- [x] Revoke all share links on leave
 - [x] Cooldown 7 days before a new space
 - [ ] Download-a-copy export job; "delete my copy now"
 - [x] Neutral, identical "space has closed" screen for both people
@@ -118,12 +118,13 @@ Onboarding UI (A1–A8)
 - [x] Our Story timeline (E0): moments, trips, a change, where it started; year sections; filters; memory detail; add a memory with photos
 - [ ] "A year ago this weekend" card on B1 · "Made" filter (Phase 4)
 - [x] Photo upload: server re-encodes every photo (orientation applied, GPS and all metadata removed, display copy + thumbnail), served only to members via the API; local folder or any S3-compatible store (MinIO/S3/R2)
-- [ ] Photo pins on boards · resumable uploads · video
+- [x] Photo pins on boards ("Or add a photo" in Save something; kind `photo`, the photo is the pin's preview)
+- [ ] Resumable uploads · video
 - [x] Read-only access to a closed space until `read_only_until` (both former members); write actions hidden; "Download a copy" zip export (also in Settings)
 - [x] Delete closed spaces' content after `read_only_until` (Phase 3 job runner)
 - [x] Live updates: Server-Sent Events per space, fanned out through Postgres LISTEN/NOTIFY (multi-instance safe); boards, pins, notes, plans, memories, partner joined, space closed. Events carry what changed, never presence
-- [ ] WebSockets for Together sessions (Phase 5)
-- [ ] Offline outbox ("Waiting to send", never claims sent) → moved to Phase 5 with the PWA/service worker
+- [x] Together sessions live (SSE + POST, Phase 5)
+- [x] Offline outbox ("Waiting to send", never claims sent), Phase 5
 
 ## Phase 3 · Notes & rituals (week 5)  ✓ done
 
@@ -133,7 +134,7 @@ Onboarding UI (A1–A8)
 - [x] Plan reminders: the evening before (8 pm in each person's own zone) or an hour before; rescheduled with every change; weekly plans roll forward; in-app notice
 - [x] Closed spaces purged when the read-only window ends (content, photos, blobs)
 - [x] Link previews moved onto the job runner
-- [ ] Web Push for things with a time (notes opening, reminders) — needs the PWA/service worker (Phase 5)
+- [x] Web Push for things with a time (notes opening, reminders), Phase 5
 - [ ] Email receipts/notifications (provider TBD)
 
 ## Phase 4 · Made by Us (week 6)  ✓ done (except F5)

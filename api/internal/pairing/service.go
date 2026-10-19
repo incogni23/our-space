@@ -347,6 +347,9 @@ func (s *Service) Leave(ctx context.Context, userID uuid.UUID) (store.Relationsh
 		if err := q.RevokeOpenInvitations(ctx, store.RevokeOpenInvitationsParams{RelationshipID: rel.ID, RespondedAt: &now}); err != nil {
 			return err
 		}
+		if err := q.RevokeAllLinksForSpace(ctx, store.RevokeAllLinksForSpaceParams{RelationshipID: rel.ID, RevokedBy: &userID}); err != nil {
+			return err
+		}
 		var readOnlyUntil *time.Time
 		if rel.Status == "active" {
 			t := now.Add(s.ReadOnlyFor)

@@ -166,11 +166,19 @@ func (s *Server) handleCreatePin(w http.ResponseWriter, r *http.Request) {
 		Note         string  `json:"note"`
 		BoardID      *string `json:"boardId"`
 		NewBoardName string  `json:"newBoardName"`
+		PhotoID      *string `json:"photoId"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
 	np := boards.NewPin{Text: in.Text, Title: in.Title, Note: in.Note, NewBoardName: in.NewBoardName}
+	if in.PhotoID != nil && *in.PhotoID != "" {
+		id, ok := parseUUID(w, *in.PhotoID)
+		if !ok {
+			return
+		}
+		np.PhotoID = &id
+	}
 	if in.BoardID != nil && *in.BoardID != "" {
 		id, ok := parseUUID(w, *in.BoardID)
 		if !ok {
@@ -184,10 +192,12 @@ func (s *Server) handleCreatePin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.publish(r, sp.ID, "pin.created", p.ID.String())
-	s.startPreview(sp, p)
-	p.PreviewStatus = "pending"
-	if p.Url == nil {
-		p.PreviewStatus = "none"
+	if p.Kind != "photo" {
+		s.startPreview(sp, p)
+		p.PreviewStatus = "pending"
+		if p.Url == nil {
+			p.PreviewStatus = "none"
+		}
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"pin": toPin(p, "")})
 }

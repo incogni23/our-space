@@ -401,6 +401,21 @@ func (q *Queries) PurgeShareLinks(ctx context.Context, relationshipID uuid.UUID)
 	return err
 }
 
+const revokeAllLinksForSpace = `-- name: RevokeAllLinksForSpace :exec
+UPDATE share_links SET revoked_at = now(), revoked_by = $2 WHERE relationship_id = $1 AND revoked_at IS NULL
+`
+
+type RevokeAllLinksForSpaceParams struct {
+	RelationshipID uuid.UUID
+	RevokedBy      *uuid.UUID
+}
+
+// Leaving turns off every preview link at once (they also stop serving when the space closes).
+func (q *Queries) RevokeAllLinksForSpace(ctx context.Context, arg RevokeAllLinksForSpaceParams) error {
+	_, err := q.db.Exec(ctx, revokeAllLinksForSpace, arg.RelationshipID, arg.RevokedBy)
+	return err
+}
+
 const revokeLink = `-- name: RevokeLink :execrows
 UPDATE share_links SET revoked_at = now(), revoked_by = $3
 WHERE id = $1 AND relationship_id = $2 AND revoked_at IS NULL

@@ -121,8 +121,10 @@ export default function PinDetail() {
       ) : null}
 
       {pin.previewMediaId ? (
-        // eslint-disable-next-line @next/next/no-img-element -- served by our API
-        <img src={photoUrl(pin.previewMediaId, "full")} alt="" className="max-h-[300px] w-full rounded-(--radius-card) object-cover" />
+        <span className="block -rotate-1 bg-paper p-2 pb-8 shadow-[0_20px_34px_-20px_rgba(0,0,0,0.55)]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- served by our API */}
+          <img src={photoUrl(pin.previewMediaId, "full")} alt={pin.kind === "photo" ? pin.title : ""} className="bw block max-h-[420px] w-full object-cover" />
+        </span>
       ) : null}
       {pin.previewDescription ? (
         <p className="m-0 text-sm leading-[1.5] text-muted">

@@ -55,6 +55,52 @@ func (q *Queries) CreateBoard(ctx context.Context, arg CreateBoardParams) (Board
 	return i, err
 }
 
+const createPhotoPin = `-- name: CreatePhotoPin :one
+INSERT INTO pins (relationship_id, board_id, created_by, kind, title, note, preview_status, preview_media_id)
+VALUES ($1, $2, $3, 'photo', $4, $5, 'done', $6)
+RETURNING id, relationship_id, board_id, created_by, kind, title, url, note, status, created_at, updated_at, deleted_at, preview_status, preview_site, preview_description, preview_media_id
+`
+
+type CreatePhotoPinParams struct {
+	RelationshipID uuid.UUID
+	BoardID        uuid.UUID
+	CreatedBy      uuid.UUID
+	Title          string
+	Note           string
+	MediaID        *uuid.UUID
+}
+
+func (q *Queries) CreatePhotoPin(ctx context.Context, arg CreatePhotoPinParams) (Pin, error) {
+	row := q.db.QueryRow(ctx, createPhotoPin,
+		arg.RelationshipID,
+		arg.BoardID,
+		arg.CreatedBy,
+		arg.Title,
+		arg.Note,
+		arg.MediaID,
+	)
+	var i Pin
+	err := row.Scan(
+		&i.ID,
+		&i.RelationshipID,
+		&i.BoardID,
+		&i.CreatedBy,
+		&i.Kind,
+		&i.Title,
+		&i.Url,
+		&i.Note,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PreviewStatus,
+		&i.PreviewSite,
+		&i.PreviewDescription,
+		&i.PreviewMediaID,
+	)
+	return i, err
+}
+
 const createPin = `-- name: CreatePin :one
 INSERT INTO pins (relationship_id, board_id, created_by, kind, title, url, note)
 VALUES ($1, $2, $3, $4, $5, $6, $7)

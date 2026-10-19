@@ -6,7 +6,7 @@ import { inkColor } from "@/lib/theme";
 import { StatusStamp } from "./print";
 import { cx } from "./ui";
 
-const kindLabel = { link: "Link", place: "Place", song: "Song", idea: "Idea" } as const;
+const kindLabel = { link: "Link", place: "Place", song: "Song", idea: "Idea", photo: "Photo" } as const;
 
 export const statusStyle = {
   saved: { label: "Saved", cls: "bg-sunken text-ink" },
@@ -30,6 +30,14 @@ function KindIcon({ kind, size = 18 }: { kind: Pin["kind"]; size?: number }) {
         <path d="M9 18V6l10-2v12" />
         <circle cx="6.5" cy="18" r="2.5" />
         <circle cx="16.5" cy="16" r="2.5" />
+      </svg>
+    );
+  if (kind === "photo")
+    return (
+      <svg {...p}>
+        <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+        <circle cx="12" cy="12" r="3.2" />
+        <path d="M8.5 5.5l1.2-2h4.6l1.2 2" />
       </svg>
     );
   if (kind === "link")
@@ -101,7 +109,7 @@ export function PinCard({ pin, people, isNew }: { pin: Pin; people: Array<User |
       {pin.kind !== "idea" && pin.previewMediaId ? (
         <span aria-hidden="true" className={cx("washi absolute left-1/2 -top-[9px] -ml-8 h-5 w-16", tone === "petal" ? "bg-petal" : "bg-tape")} style={{ transform: `rotate(${tapeRot}deg)` }} />
       ) : null}
-      {pin.kind === "idea" || !pin.previewMediaId ? null : (
+      {pin.kind === "idea" || !pin.previewMediaId || (pin.kind === "photo" && pin.title === "A photo") ? null : (
         <span className="px-0.5 font-display text-base font-bold leading-[1.1]">{pin.title}</span>
       )}
       {pin.note ? (

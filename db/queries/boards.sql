@@ -109,3 +109,8 @@ SELECT id, title, kind FROM pins
 WHERE relationship_id = $1 AND deleted_at IS NULL AND status = 'saved' AND kind IN ('place', 'idea', 'link')
 ORDER BY (kind = 'place') DESC, created_at
 LIMIT 1;
+
+-- name: CreatePhotoPin :one
+INSERT INTO pins (relationship_id, board_id, created_by, kind, title, note, preview_status, preview_media_id)
+VALUES (@relationship_id, @board_id, @created_by, 'photo', @title, @note, 'done', @media_id)
+RETURNING *;

@@ -78,3 +78,7 @@ DELETE FROM creations WHERE relationship_id = $1;
 
 -- name: PurgePlanEvents :exec
 DELETE FROM plan_events WHERE plan_id IN (SELECT id FROM plans WHERE relationship_id = $1);
+
+-- name: RevokeAllLinksForSpace :exec
+-- Leaving turns off every preview link at once (they also stop serving when the space closes).
+UPDATE share_links SET revoked_at = now(), revoked_by = $2 WHERE relationship_id = $1 AND revoked_at IS NULL;
